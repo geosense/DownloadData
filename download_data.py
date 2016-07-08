@@ -192,10 +192,6 @@ class DownloadData:
     def run(self):
         """Run method that performs all the real work"""
         # show the dialog
-        self.dlg.maName.setText('mapovani-dronem-saratice')
-        self.dlg.userName.setText('u@geosense.cz')
-        self.dlg.userPassword.setText('22gEo4')
-        
         self.set_domains()
 
         self.dlg.getData.setEnabled(True)
