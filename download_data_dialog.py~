@@ -23,11 +23,7 @@
 
 import os
 
-<<<<<<< HEAD
 from PyQt4 import QtGui, uic, QtCore
-=======
-from PyQt4 import QtGui, uic
->>>>>>> origin/master
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'download_data_dialog_base.ui'))
@@ -43,7 +39,6 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
-<<<<<<< HEAD
 
 	self.treeWidget.clicked.connect(self.enable_output)
         self.outputDirButton.clicked.connect(self.selectdir)
@@ -58,5 +53,3 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
                                                                   "shapefile (*.shp)") + ".shp")
         self.button_box.setEnabled(True)
 
-=======
->>>>>>> origin/master

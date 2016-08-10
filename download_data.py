@@ -23,11 +23,7 @@
 from PyQt4.QtCore import *
 from PyQt4.QtCore import pyqtSlot
 from qgis.core import *
-<<<<<<< HEAD
 from PyQt4.QtGui import QAction, QIcon, QMessageBox, QTreeWidgetItem, QProgressBar
-=======
-from PyQt4.QtGui import QAction, QIcon, QMessageBox, QTreeWidgetItem
->>>>>>> origin/master
 import resources
 from PyQt4 import QtCore, QtGui
 import os.path
@@ -36,13 +32,10 @@ import requests
 from qgis.gui import QgsMessageBar
 COMBINATIONS = []
 from download_data_dialog import DownloadDataDialog
-<<<<<<< HEAD
 import tempfile
 import sqlite3
 import unicodedata
 import time
-=======
->>>>>>> origin/master
 
 
 class DownloadData:
@@ -200,7 +193,6 @@ class DownloadData:
         domains = ['geosense.cz', 'geosense.sk', 'cleerio.com']        
         self.dlg.domain.addItems(domains)
 
-<<<<<<< HEAD
     def create_output_dir(self):
         cleerio_dir = os.path.normpath(os.path.join(QgsApplication.qgisSettingsDirPath(),'CLEERIO_data'))
         if not os.path.exists(cleerio_dir):
@@ -224,16 +216,10 @@ class DownloadData:
             text_file.write(property_def)
         text_file.close()
     
-=======
->>>>>>> origin/master
     def run(self):
         """Run method that performs all the real work"""
         # show the dialog
         self.set_domains()
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/master
         self.dlg.getData.setEnabled(True)
         self.dlg.maName.setEnabled(True)
         self.dlg.checkBox.setEnabled(True)
@@ -246,13 +232,10 @@ class DownloadData:
         self.dlg.outputDirButton.setDisabled(True)
         self.dlg.treeWidget.clear()
         self.dlg.treeWidget.setDisabled(True)
-<<<<<<< HEAD
         self.dlg.images.setDisabled(True)
         self.dlg.images.setChecked(False)
         self.dlg.documents.setDisabled(True)
         self.dlg.documents.setChecked(False)
-=======
->>>>>>> origin/master
 
         self.dlg.show()
         
@@ -264,7 +247,6 @@ class DownloadData:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-<<<<<<< HEAD
             progressMessageBar = self.iface.messageBar().createMessage("Zpracovávám objekty".decode('utf-8'))
             progress = QProgressBar()
             progress.setMaximum(100)
@@ -280,16 +262,6 @@ class DownloadData:
             (obj_id, layer_id, crs) = get_object_layer_id_crs(selected_layer)
 
             (properties,relation_ids,relations_ids, image_ids, document_ids, link_ids, iframe_ids, id_list_ids, id_list_values) = sort_attributes(obj_id)
-=======
-
-            self.iface.messageBar().pushMessage("INFO:", "Vrstva bude přidána, pokud jsou data větší může to trvat déle".decode("utf-8"), level=QgsMessageBar.SUCCESS, duration = 4)
-            selected_item = self.dlg.treeWidget.selectedItems()
-            selected_layer = selected_item[0].text(0)
-
-            (obj_id, layer_id, crs) = get_object_layer_id_crs(selected_layer)
-
-            (properties,relation_ids,relations_ids, image_ids, document_ids, link_ids, iframe_ids) = sort_attributes(obj_id)
->>>>>>> origin/master
 
             data_raw = get_object_type_data(layer_id, obj_id, self.dlg.domain.currentText()) 
             
@@ -297,7 +269,6 @@ class DownloadData:
 
             json_crs = add_crs_definition(json_no_crs, crs )
             
-<<<<<<< HEAD
             
             full_json = change_attributes(self, json_crs, properties, relation_ids,relations_ids, image_ids, document_ids, link_ids, iframe_ids, id_list_ids, id_list_values, output_dir_cleerio, progress)
             export_file = self.dlg.outputDir.text()
@@ -308,25 +279,10 @@ class DownloadData:
                 json.dump(full_json, outfile)
        
             vlayer = QgsVectorLayer(geojson_path,"mygeojson","ogr")
-=======
-            full_json = change_attributes(json_crs, properties, relation_ids,relations_ids, image_ids, document_ids, link_ids, iframe_ids)
-            export_file = self.dlg.outputDir.text()
-
-            curr_path = os.path.dirname(__file__)
-            temporary_path = os.path.join(curr_path,'temp_json_save.json')
-                            
-            with open(temporary_path, 'w') as outfile:
-                json.dump(full_json, outfile)
-       
-            vlayer = QgsVectorLayer(temporary_path,"mygeojson","ogr")
-
-            print export_file
->>>>>>> origin/master
             _writer = QgsVectorFileWriter.writeAsVectorFormat(vlayer,export_file,"utf-8",None,"ESRI Shapefile")       
             
             shplayer = QgsVectorLayer(export_file, os.path.splitext(os.path.basename(export_file))[0], "ogr")
             QgsMapLayerRegistry.instance().addMapLayer(shplayer)
-<<<<<<< HEAD
             db_name = os.path.join(output_dir_cleerio, "cleerio_data")
             QgsVectorFileWriter.writeAsVectorFormat( vlayer,
                                                  db_name,
@@ -366,13 +322,6 @@ def clean_output_dir(output_dir):
     if not os.listdir(os.path.join(output_dir,'documents')):
         os.rmdir(os.path.join(output_dir,'documents'))
 
-=======
-            os.remove(temporary_path)
-
-            print "konec"
-            pass
-
->>>>>>> origin/master
 def add_crs_definition(json, crs_def):
     crs = {}
     crs["type"] = "name"
@@ -382,13 +331,9 @@ def add_crs_definition(json, crs_def):
     json["crs"] = crs
     return json
 
-<<<<<<< HEAD
 def change_attributes(self, input_json, properties, relation_ids, relations_ids, image_ids, document_ids, link_ids, iframe_ids, id_list_ids, id_list_values, output_dir, progress):
 
     feature_count = len(input_json['features'])
-=======
-def change_attributes(input_json, properties, relation_ids, relations_ids, image_ids, document_ids, link_ids, iframe_ids):
->>>>>>> origin/master
     counter = 0
     for feature in input_json['features']:
         for prop_id in feature['properties'].keys():
@@ -404,26 +349,18 @@ def change_attributes(input_json, properties, relation_ids, relations_ids, image
                     value = str(related) 
                 elif int(prop_id) in image_ids and feature['properties'][prop_id] is not None:
                     value = feature['properties'][prop_id]['src']
-<<<<<<< HEAD
                     if self.dlg.images.isChecked():
                         download_files('images', value, feature['properties'][prop_id]['id'], output_dir)
                 elif int(prop_id) in document_ids and feature['properties'][prop_id] is not None:
                     value = feature['properties'][prop_id]['src']
                     if self.dlg.documents.isChecked():
                         download_files('documents', value,feature['properties'][prop_id]['id'], output_dir)
-=======
-                elif int(prop_id) in document_ids and feature['properties'][prop_id] is not None:
-                    value = feature['properties'][prop_id]['src']
->>>>>>> origin/master
                 elif int(prop_id) in link_ids and feature['properties'][prop_id] is not None:
                     value = feature['properties'][prop_id]['link']
                 elif int(prop_id) in iframe_ids and feature['properties'][prop_id] is not None:
                     value = feature['properties'][prop_id]['src']
-<<<<<<< HEAD
                 elif int(prop_id) in id_list_ids and feature['properties'][prop_id] is not None:
                     value = id_list_values[feature['properties'][prop_id]]
-=======
->>>>>>> origin/master
                 else:
                     value = feature['properties'][prop_id]                            
                 input_json['features'][counter]['properties'][prop_name] = value                      
@@ -431,14 +368,10 @@ def change_attributes(input_json, properties, relation_ids, relations_ids, image
             elif prop_id in ('label', 'object_type_id', 'layers'):
                 del input_json['features'][counter]['properties'][prop_id]
         counter += 1
-<<<<<<< HEAD
         progress.setValue(int((counter/float(feature_count))*96+2))
 
     if self.dlg.images.isChecked() or self.dlg.documents.isChecked():
         clean_output_dir(output_dir)
-=======
-    
->>>>>>> origin/master
     return input_json
 
 
@@ -450,21 +383,15 @@ def sort_attributes(object_id):
     document_ids = []
     link_ids = []
     iframe_ids = []
-<<<<<<< HEAD
     id_list_ids = []
     id_list_values = {}
-=======
->>>>>>> origin/master
     for object_type in LAYERS_AVAILABLE['result']['objectTypes']:
         if object_type['id'] == object_id:
             for prop in object_type['controlers']:
                 propert = {}
                 propert['name'] = prop['name']
                 propert['type'] = prop['data_type']
-<<<<<<< HEAD
                 propert['label'] = prop['label']
-=======
->>>>>>> origin/master
                 properties[str(prop['id'])] = propert
                 if prop['data_type']  == 'relation':
                     relation_ids.append(prop['id'])
@@ -478,17 +405,12 @@ def sort_attributes(object_id):
                     link_ids.append(prop['id'])
                 elif prop['data_type'] == 'iframe':
                     iframe_ids.append(prop['id'])
-<<<<<<< HEAD
                 elif prop['data_type'] in ('id_list', 'id_alist', 'id_elist'):
                     id_list_ids.append(prop['id'])
                     for item in prop['items']:                        
                         id_list_values[item['value']] = item['label']
 
     return(properties, relation_ids, relations_ids, image_ids, document_ids, link_ids, iframe_ids, id_list_ids, id_list_values)
-=======
-
-    return(properties, relation_ids, relations_ids, image_ids, document_ids, link_ids, iframe_ids)
->>>>>>> origin/master
 
         
 def get_object_layer_id_crs(selected_layer):
@@ -502,7 +424,6 @@ def get_object_layer_id_crs(selected_layer):
             crs = layer_object['crs']
     return (obj_id, layer_id, crs)   
 
-<<<<<<< HEAD
 
 
 def set_objects(self):
@@ -542,27 +463,19 @@ def set_objects(self):
     self.dlg.treeWidget.setEnabled(True)
     self.dlg.outputDir.setEnabled(True)
 
-=======
->>>>>>> origin/master
 def get_input_variables(self, domain):
     global NAME 
     global NO_LOGIN
     global USER
     global PASSWORD
     global GP_ID
-<<<<<<< HEAD
     global SESSION
-=======
->>>>>>> origin/master
 
     NAME = self.dlg.maName.text()
     USER = self.dlg.userName.text()
     PASSWORD = self.dlg.userPassword.text()
     NO_LOGIN = self.dlg.checkBox.isChecked()
-<<<<<<< HEAD
     SESSION = requests.session()
-=======
->>>>>>> origin/master
 
     env_data = get_environment_data(domain)
 
@@ -591,59 +504,12 @@ def get_input_variables(self, domain):
     return env_data
 
 
-<<<<<<< HEAD
-=======
-def set_objects(self):
-    print     
-    environment = get_input_variables(self, self.dlg.domain.currentText()
-)
-    try:
-        vysledek = environment['result']
-    except Exception, e:
-        exc = Exception
-        return exc     
-    self.dlg.domain.setDisabled(True)
-    self.dlg.getData.setDisabled(True)
-    self.dlg.maName.setDisabled(True)
-    self.dlg.checkBox.setDisabled(True)
-    self.dlg.userName.setDisabled(True)
-    self.dlg.userPassword.setDisabled(True)
-    self.dlg.treeWidget.clear()
-
-    global LAYERS_AVAILABLE
-    LAYERS_AVAILABLE = get_user_data(self.dlg.domain.currentText())
-    for layer in LAYERS_AVAILABLE['result']['layers']:
-        if layer['type'] in('unip','htable'):
-            layer_object_types = layer['object_type_ids']
-                    
-            for object_type in LAYERS_AVAILABLE['result']['objectTypes']:
-                if object_type['id'] in layer_object_types:
-                    new_comb = {}
-                    new_comb['name'] =  (layer['name']).decode("utf-8") + ' - ' +  (object_type['name']).decode("utf-8")                        
-                    new_comb['layer_id'] = layer['id']
-                    layer_item = QtGui.QTreeWidgetItem([new_comb["name"]])
-                    self.dlg.treeWidget.addTopLevelItem(layer_item)
-                    new_comb['object_type_id'] = object_type['id']
-                    new_comb['crs'] = layer['projection']
-                    COMBINATIONS.append(new_comb)
-
-    self.dlg.treeWidget.setEnabled(True)
-    self.dlg.outputDir.setEnabled(True)
-
->>>>>>> origin/master
 def get_environment_data(domain):
     """
     Get infromation abour MA 
     """
     url_text = 'http://api.' + domain +'/gp2/get-environment/' + NAME
-<<<<<<< HEAD
     result = SESSION.post(url_text)
-=======
-
-    environment_logout = requests.session()
-    result = environment_logout.post(url_text)
-
->>>>>>> origin/master
     response = byteify(json.loads(result.text, encoding="utf-8"))
 
     try:
@@ -657,15 +523,8 @@ def get_environment_data(domain):
 def try_user_login(domain):
     login = 'http://api.' + domain + '/gp2/sign-in/' + str(GP_ID)
     login_data = '{"username":"%s","password":"%s"}' %(USER,PASSWORD)
-<<<<<<< HEAD
 
     log_in = SESSION.post(login,data=login_data)
-=======
-    logout = 'http://api.' + domain + 'cz/admin/default/logout?gpId=%s#' %GP_ID
-
-    session = requests.session()
-    log_in = session.post(login,data=login_data)
->>>>>>> origin/master
     response = byteify(json.loads(log_in.text, encoding="utf-8"))
     
     try:
@@ -680,27 +539,9 @@ def get_user_data(domain):
     Get list of layer and object types  with read right to user
     """
     service_url = 'http://api.' + domain + '/gp2/get-environment/' + NAME
-<<<<<<< HEAD
     login_data = '{"username":"%s","password":"%s"}' %(USER,PASSWORD)
     
     response_file = SESSION.post(service_url)
-=======
-
-    if NO_LOGIN == False:
-        login = 'http://api.' + domain + '/gp2/sign-in/' + str(GP_ID)
-        login_data = '{"username":"%s","password":"%s"}' %(USER,PASSWORD)
-        logout = 'http://api.' + domain + '/admin/default/logout?gpId=%s#' %GP_ID
-
-    session = requests.session()
-    
-    if NO_LOGIN == False:
-        log_in = session.post(login,data=login_data)
-        response_file = session.post(service_url)
-        logout = session.get(logout)
-    else:
-        response_file = session.post(service_url)
-
->>>>>>> origin/master
 
     response = byteify(json.loads(response_file.text, encoding="utf-8"))
 
@@ -715,24 +556,12 @@ def get_object_type_data(layer_id, object_type_id, domain):
     data_params = """{"controlers":[],"ids_only":0,"layer_ids":[%s],
                      "object_type_ids":[%s],"paging":null,"geometries":[],
                      "order":[]}""" %(layer_id, object_type_id)       
-<<<<<<< HEAD
     #url = 'http://api.' + domain + '/gp2/sign-in/' + str(GP_ID)
     #logout = 'http://api.' + domain + '/admin/default/logout?gpId=%s#' %GP_ID
     #login_data = '{"username":"%s","password":"%s"}' %(USER,PASSWORD)
 
     s = SESSION.post(url_text,data_params)
     
-=======
-    url = 'http://api.' + domain + '/gp2/sign-in/' + str(GP_ID)
-    logout = 'http://api.' + domain + '/admin/default/logout?gpId=%s#' %GP_ID
-    login_data = '{"username":"%s","password":"%s"}' %(USER,PASSWORD)
-    print login_data
-    session = requests.session()
-    r = session.post(url, data=login_data)
-    s = session.post(url_text,data_params)
-    t = session.get(logout)
-
->>>>>>> origin/master
     return s
 
 
