@@ -185,7 +185,11 @@
    <property name="geometry">
     <rect>
      <x>40</x>
+<<<<<<< HEAD
      <y>510</y>
+=======
+     <y>540</y>
+>>>>>>> origin/master
      <width>391</width>
      <height>32</height>
     </rect>
@@ -331,6 +335,7 @@
     </item>
    </layout>
   </widget>
+<<<<<<< HEAD
   <widget class="QWidget" name="">
    <property name="geometry">
     <rect>
@@ -363,6 +368,8 @@
     </item>
    </layout>
   </widget>
+=======
+>>>>>>> origin/master
  </widget>
  <resources/>
  <connections>

@@ -52,6 +52,9 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
                                                                   QtCore.QDir.homePath(),
                                                                   "shapefile (*.shp)") + ".shp")
         self.button_box.setEnabled(True)
+<<<<<<< HEAD
 	self.images.setEnabled(True)
         self.documents.setEnabled(True)
+=======
+>>>>>>> origin/master
 
