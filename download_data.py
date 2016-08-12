@@ -28,7 +28,8 @@ import resources
 from PyQt4 import QtCore, QtGui
 import os.path
 import json
-import requests
+import pip
+#import requests
 from qgis.gui import QgsMessageBar
 COMBINATIONS = []
 from download_data_dialog import DownloadDataDialog
@@ -37,6 +38,18 @@ import sqlite3
 import unicodedata
 import time
 
+def install_and_import(package):
+    import importlib
+    try:
+        importlib.import_module(package)
+    except ImportError:
+        import pip
+        pip.main(['install', package])
+    finally:
+        globals()[package] = importlib.import_module(package)
+
+
+install_and_import('requests')
 
 class DownloadData:
     """QGIS Plugin Implementation."""
