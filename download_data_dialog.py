@@ -25,6 +25,7 @@ import os
 
 from PyQt4 import QtGui, uic, QtCore
 
+
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'download_data_dialog_base.ui'))
 
@@ -42,6 +43,44 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
 
 	self.treeWidget.clicked.connect(self.enable_output)
         self.outputDirButton.clicked.connect(self.selectdir)
+
+    def import_error_message(self, modules):
+        """Will print error message about not imported modules
+        """
+
+        msg = QtGui.QMessageBox()
+        msg.setIcon(QtGui.QMessageBox.Critical)
+        msg.setText(u"Nepodařilo se načít některé důležité moduly")
+        msg.setWindowTitle(u"Chyba při importu modulů")
+        msg.setInformativeText(
+            u"Bohužel se nepodařilo načíst některé důležité moduly:\n\n" \
+            u"  {}\n\n" \
+            u"Zřejmě je nemáte nainstalované ve vašem systému.\n\n" \
+            u"Návod na instalaci chybějících modulů můžete nalézt " \
+            u"níže:".format(", ".join(modules)))
+
+        how_to = ''
+        pip = ""
+        import platform
+        if platform.system() != 'Windows':
+            how_to = u"Pro instalaci chybějích modulů spusťte příkazovou " \
+            u"řádku Windows (cmd) a v ní spusťte následující příkaz: \n\n"
+            pip = u"C:\\OSGeo4W\\apps\\Python27\\Scripts\\pip.exe"
+        else:
+            how_to = u"Pro instalaci chybějích modulů spusťte příkazovou " \
+            u"řádku a použijte příkaz: \n\n"
+            pip = "pip"
+
+        for module in modules:
+            how_to += u"  {} install {}\n".format(pip, module)
+
+        msg.setDetailedText(how_to)
+
+        msg.setStandardButtons(QtGui.QMessageBox.Ok)
+        msg.exec_()
+
+
+
 
     def enable_output(self):
         self.outputDirButton.setEnabled(True)

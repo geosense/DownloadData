@@ -28,8 +28,6 @@ import resources
 from PyQt4 import QtCore, QtGui
 import os.path
 import json
-import pip
-#import requests
 from qgis.gui import QgsMessageBar
 COMBINATIONS = []
 from download_data_dialog import DownloadDataDialog
@@ -48,6 +46,26 @@ def install_and_import(package):
     finally:
         globals()[package] = importlib.import_module(package)
 
+def _import_modules():
+    """Import carefully requests dependency
+    """
+
+    modules = [
+            "requests"
+    ]
+
+    false_modules = []
+
+    import importlib
+
+    for module in modules:
+        try:
+            importlib.import_module(module)
+        except ImportError as e:
+            false_modules.append(module)
+
+    return false_modules
+
 
 install_and_import('requests')
 
@@ -62,6 +80,8 @@ class DownloadData:
             application at run time.
         :type iface: QgsInterface
         """
+
+
         # Save reference to the QGIS interface
         self.iface = iface
         # initialize plugin directory
@@ -251,7 +271,11 @@ class DownloadData:
         self.dlg.documents.setChecked(False)
 
         self.dlg.show()
-        
+
+        false_imports = _import_modules()
+        if len(false_imports):
+            self.dlg.import_error_message(false_imports)
+
         try:
             self.dlg.getData.clicked.connect(lambda: set_objects(self))
         except Exception, e:
