@@ -36,15 +36,6 @@ import sqlite3
 import unicodedata
 import time
 
-def install_and_import(package):
-    import importlib
-    try:
-        importlib.import_module(package)
-    except ImportError:
-        import pip
-        pip.main(['install', package])
-    finally:
-        globals()[package] = importlib.import_module(package)
 
 def _import_modules():
     """Import carefully requests dependency
@@ -65,9 +56,6 @@ def _import_modules():
             false_modules.append(module)
 
     return false_modules
-
-
-install_and_import('requests')
 
 class DownloadData:
     """QGIS Plugin Implementation."""
