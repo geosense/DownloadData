@@ -51,7 +51,7 @@ def _import_modules():
 
     for module in modules:
         try:
-            importlib.import_module(module)
+            globals()[module] = importlib.import_module(module)
         except ImportError as e:
             false_modules.append(module)
 
@@ -79,7 +79,7 @@ class DownloadData:
         locale_path = os.path.join(
             self.plugin_dir,
             'i18n',
-            'DownloadData_{}.qm'.format(locale))
+            'download_data_{}.qm'.format(locale))
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -318,12 +318,12 @@ class DownloadData:
                                                  None,
                                                  ["SPATIALITE=YES",] )
             progress.setValue(100)
-            sqlitelayer =  QgsVectorLayer(db_name+".sqlite", "sqlite_vrtstva", "ogr") 
+            sqlitelayer =  QgsVectorLayer(db_name+".sqlite", "sqlite_vrtstva", "ogr")
             QgsMapLayerRegistry.instance().addMapLayer(sqlitelayer)
 
 
             self.write_info(properties,output_dir_cleerio)
-            self.iface.messageBar().clearWidgets() 
+            self.iface.messageBar().clearWidgets()
             text_msg = ("Stahování proběhlo, podrobná data jsou ve složce \n%s").decode("utf-8") %output_dir_cleerio
             msgBox = QMessageBox()
             msgBox.setText(text_msg)
@@ -339,7 +339,7 @@ def download_files(file_type ,url, id_name,output_dir):
         output_dir
         name = os.path.join(images_dir,id_name)
         with open(name, "wb") as code:
-            code.write(r.content)   
+            code.write(r.content)
 
 def clean_output_dir(output_dir):
     if not os.listdir(os.path.join(output_dir,'images')):
@@ -473,7 +473,7 @@ def set_objects(self):
     for layer in LAYERS_AVAILABLE['result']['layers']:
         if layer['type'] in('unip','htable'):
             layer_object_types = layer['object_type_ids']
-                    
+
             for object_type in LAYERS_AVAILABLE['result']['objectTypes']:
                 if object_type['id'] in layer_object_types:
                     new_comb = {}
@@ -489,7 +489,7 @@ def set_objects(self):
     self.dlg.outputDir.setEnabled(True)
 
 def get_input_variables(self, domain):
-    global NAME 
+    global NAME
     global NO_LOGIN
     global USER
     global PASSWORD
@@ -505,7 +505,7 @@ def get_input_variables(self, domain):
     env_data = get_environment_data(domain)
 
     try:
-        GP_ID = env_data['result'] ['gpId'] 
+        GP_ID = env_data['result']['gpId']
     except Exception,e:
         text_msg = ("MA '" + NAME +"' nenalezena!").decode("utf-8")
         msgBox = QMessageBox()

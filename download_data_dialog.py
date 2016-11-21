@@ -50,25 +50,25 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
 
         msg = QtGui.QMessageBox()
         msg.setIcon(QtGui.QMessageBox.Critical)
-        msg.setText(u"Nepodařilo se načít některé důležité moduly")
-        msg.setWindowTitle(u"Chyba při importu modulů")
-        msg.setInformativeText(
+        msg.setText(self.tr(u"Nepodařilo se načít některé důležité moduly"))
+        msg.setWindowTitle(self.tr(u"Chyba při importu modulů"))
+        msg.setInformativeText(self.tr(
             u"Bohužel se nepodařilo načíst některé důležité moduly:\n\n" \
             u"  {}\n\n" \
             u"Zřejmě je nemáte nainstalované ve vašem systému.\n\n" \
             u"Návod na instalaci chybějících modulů můžete nalézt " \
-            u"níže:".format(", ".join(modules)))
+            u"níže:").format(", ".join(modules)))
 
         how_to = ''
         pip = ""
         import platform
-        if platform.system() != 'Windows':
-            how_to = u"Pro instalaci chybějích modulů spusťte příkazovou " \
-            u"řádku Windows (cmd) a v ní spusťte následující příkaz: \n\n"
+        if platform.system() == 'Windows':
+            how_to = self.tr(u"Pro instalaci chybějích modulů spusťte příkazovou " \
+            u"řádku Windows (cmd) a v ní spusťte následující příkaz: \n\n")
             pip = u"C:\\OSGeo4W\\apps\\Python27\\Scripts\\pip.exe"
         else:
-            how_to = u"Pro instalaci chybějích modulů spusťte příkazovou " \
-            u"řádku a použijte příkaz: \n\n"
+            how_to = self.tr(u"Pro instalaci chybějích modulů spusťte příkazovou " \
+            u"řádku a použijte příkaz: \n\n")
             pip = "pip"
 
         for module in modules:
@@ -87,9 +87,9 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
 
     def selectdir(self):
         self.outputDir.setText(QtGui.QFileDialog.getSaveFileName(self,
-                                                                  "Save Outup as *.shp",
+                                                                  self.tr("Save Outup as *.shp"),
                                                                   QtCore.QDir.homePath(),
-                                                                  "shapefile (*.shp)") + ".shp")
+                                                                  self.tr("shapefile (*.shp)")) + ".shp")
         self.button_box.setEnabled(True)
 	self.images.setEnabled(True)
         self.documents.setEnabled(True)
