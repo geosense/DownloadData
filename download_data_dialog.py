@@ -79,9 +79,6 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         msg.setStandardButtons(QtGui.QMessageBox.Ok)
         msg.exec_()
 
-
-
-
     def enable_output(self):
         self.outputDirButton.setEnabled(True)
 
@@ -90,7 +87,6 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
                                                                   self.tr("Save Outup as *.shp"),
                                                                   QtCore.QDir.homePath(),
                                                                   self.tr("shapefile (*.shp)")) + ".shp")
-        self.button_box.setEnabled(True)
 	self.images.setEnabled(True)
         self.documents.setEnabled(True)
 

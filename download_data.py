@@ -452,21 +452,15 @@ def get_object_layer_id_crs(selected_layer):
 
 
 def set_objects(self):
-    print     
-    environment = get_input_variables(self, self.dlg.domain.currentText()
-)
+    environment = get_input_variables(self, self.dlg.domain.currentText())
     try:
         vysledek = environment['result']
     except Exception, e:
         exc = Exception
-        return exc     
-    self.dlg.domain.setDisabled(True)
-    self.dlg.getData.setDisabled(True)
-    self.dlg.maName.setDisabled(True)
-    self.dlg.checkBox.setDisabled(True)
-    self.dlg.userName.setDisabled(True)
-    self.dlg.userPassword.setDisabled(True)
+        return exc
+
     self.dlg.treeWidget.clear()
+    self.dlg.treeWidget.setDisabled(True)
 
     global LAYERS_AVAILABLE
     LAYERS_AVAILABLE = get_user_data(self.dlg.domain.currentText())
