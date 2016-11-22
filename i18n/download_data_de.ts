@@ -2,6 +2,21 @@
 <!DOCTYPE TS>
 <TS version="2.0" language="de_DE">
 <context>
+    <name>DownloadDataDialog</name>
+    <message>
+        <source>Save Outup as *.shp</source>
+        <translation type="obsolete">Speichern als *.shp</translation>
+    </message>
+    <message>
+        <source>shapefile (*.shp)</source>
+        <translation type="obsolete">ESRI Shapefile (*.shp)</translation>
+    </message>
+    <message>
+        <source>NepodaÅilo se naÄÃ­t nÄkterÃ© dÅ¯leÅ¾itÃ© moduly</source>
+        <translation type="obsolete">Einige wichtite Module waren nicht gefunden</translation>
+    </message>
+</context>
+<context>
     <name>htableDialogBase</name>
     <message utf8="true">
         <location filename="../download_data_dialog_base.ui" line="14"/>

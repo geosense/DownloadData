@@ -2,6 +2,57 @@
 <!DOCTYPE TS>
 <TS version="2.0" language="cs_CZ">
 <context>
+    <name>DownloadDataDialog</name>
+    <message>
+        <source>Save Outup as *.shp</source>
+        <translation type="obsolete">Uložit jako *.shp</translation>
+    </message>
+    <message>
+        <source>shapefile (*.shp)</source>
+        <translation type="obsolete">ESRI Shapefile (*.shp)</translation>
+    </message>
+    <message>
+        <source>NepodaÅilo se naÄÃ­t nÄkterÃ© dÅ¯leÅ¾itÃ© moduly</source>
+        <translation type="obsolete">Nepodařilo se nalézt některé důležité moduly</translation>
+    </message>
+    <message>
+        <source>Chyba pÅi importu modulÅ¯</source>
+        <translation type="obsolete">Chyba při načítání modulů</translation>
+    </message>
+    <message>
+        <source>BohuÅ¾el se nepodaÅilo naÄÃ­st nÄkterÃ© dÅ¯leÅ¾itÃ© moduly:
+
+  {}
+
+ZÅejmÄ je nemÃ¡te nainstalovanÃ© ve vaÅ¡em systÃ©mu.
+
+NÃ¡vod na instalaci chybÄjÃ­cÃ­ch modulÅ¯ mÅ¯Å¾ete nalÃ©zt nÃ­Å¾e:</source>
+        <translation type="obsolete">Bohužel se nepodařilo načíst některé důležité moduly:
+
+{}
+
+Zřejmě je nemáte nainstalované ve vašem systému.
+
+Návod na instalaci chybějících modulů můžete nalézt níže:</translation>
+    </message>
+    <message>
+        <source>Pro instalaci chybÄjÃ­ch modulÅ¯ spusÅ¥te pÅÃ­kazovou ÅÃ¡dku Windows (cmd) a v nÃ­ spusÅ¥te nÃ¡sledujÃ­cÃ­ pÅÃ­kaz: 
+
+</source>
+        <translation type="obsolete">Pro instalaci chybějících modlů spusťte příkazovou řáku Windows (cmd) a v ní spusťte následující příkaz:
+
+</translation>
+    </message>
+    <message>
+        <source>Pro instalaci chybÄjÃ­ch modulÅ¯ spusÅ¥te pÅÃ­kazovou ÅÃ¡dku a pouÅ¾ijte pÅÃ­kaz: 
+
+</source>
+        <translation type="obsolete">Pro instalaci chybějících modulů spusťte příkazovou řádku a použijte příkaz:
+
+</translation>
+    </message>
+</context>
+<context>
     <name>htableDialogBase</name>
     <message utf8="true">
         <location filename="../download_data_dialog_base.ui" line="14"/>

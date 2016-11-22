@@ -50,29 +50,29 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
 
         msg = QtGui.QMessageBox()
         msg.setIcon(QtGui.QMessageBox.Critical)
-        msg.setText(self.tr(u"Nepodařilo se načít některé důležité moduly"))
-        msg.setWindowTitle(self.tr(u"Chyba při importu modulů"))
+        msg.setText(self.tr("Nepodařilo se načít některé důležité moduly"))
+        msg.setWindowTitle(self.tr("Chyba při importu modulů"))
         msg.setInformativeText(self.tr(
-            u"Bohužel se nepodařilo načíst některé důležité moduly:\n\n" \
-            u"  {}\n\n" \
-            u"Zřejmě je nemáte nainstalované ve vašem systému.\n\n" \
-            u"Návod na instalaci chybějících modulů můžete nalézt " \
-            u"níže:").format(", ".join(modules)))
+            "Bohužel se nepodařilo načíst některé důležité moduly:\n\n" \
+            "  {}\n\n" \
+            "Zřejmě je nemáte nainstalované ve vašem systému.\n\n" \
+            "Návod na instalaci chybějících modulů můžete nalézt " \
+            "níže:").format(", ".join(modules)))
 
         how_to = ''
         pip = ""
         import platform
         if platform.system() == 'Windows':
-            how_to = self.tr(u"Pro instalaci chybějích modulů spusťte příkazovou " \
-            u"řádku Windows (cmd) a v ní spusťte následující příkaz: \n\n")
-            pip = u"C:\\OSGeo4W\\apps\\Python27\\Scripts\\pip.exe"
+            how_to = self.tr("Pro instalaci chybějích modulů spusťte příkazovou " \
+            "řádku Windows (cmd) a v ní spusťte následující příkaz: \n\n")
+            pip = "C:\\OSGeo4W\\apps\\Python27\\Scripts\\pip.exe"
         else:
-            how_to = self.tr(u"Pro instalaci chybějích modulů spusťte příkazovou " \
-            u"řádku a použijte příkaz: \n\n")
+            how_to = self.tr("Pro instalaci chybějích modulů spusťte příkazovou " \
+            "řádku a použijte příkaz: \n\n")
             pip = "pip"
 
         for module in modules:
-            how_to += u"  {} install {}\n".format(pip, module)
+            how_to += "  {} install {}\n".format(pip, module)
 
         msg.setDetailedText(how_to)
 
