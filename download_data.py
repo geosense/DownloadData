@@ -211,7 +211,7 @@ class DownloadData:
     def set_domains(self):
         self.dlg.domain.clear()
         self.dlg.domain.setEnabled(True)
-        domains = ['geosense.cz', 'geosense.sk', 'cleerio.com']        
+        domains = ['cz', 'sk', 'com']        
         self.dlg.domain.addItems(domains)
 
     def create_output_dir(self):
@@ -527,7 +527,7 @@ def get_environment_data(domain):
     """
     Get infromation abour MA 
     """
-    url_text = 'http://api.' + domain +'/gp2/get-environment/' + NAME
+    url_text = 'http://api.cleerio.' + domain +'/gp2/get-environment/' + NAME
     result = SESSION.post(url_text)
     response = byteify(json.loads(result.text, encoding="utf-8"))
 
@@ -540,7 +540,7 @@ def get_environment_data(domain):
     return response
 
 def try_user_login(domain):
-    login = 'http://api.' + domain + '/gp2/sign-in/' + str(GP_ID)
+    login = 'http://api.cleerio.' + domain + '/gp2/sign-in/' + str(GP_ID)
     login_data = '{"username":"%s","password":"%s"}' %(USER,PASSWORD)
 
     log_in = SESSION.post(login,data=login_data)
@@ -557,7 +557,7 @@ def get_user_data(domain):
     """
     Get list of layer and object types  with read right to user
     """
-    service_url = 'http://api.' + domain + '/gp2/get-environment/' + NAME
+    service_url = 'http://api.cleerio.' + domain + '/gp2/get-environment/' + NAME
     login_data = '{"username":"%s","password":"%s"}' %(USER,PASSWORD)
     
     response_file = SESSION.post(service_url)
@@ -571,7 +571,7 @@ def get_object_type_data(layer_id, object_type_id, domain):
     """
     Get GEOJSON by GP_ID, LAYER_ID and OBJECT_TYPE_ID
     """
-    url_text = 'http://api.' + domain + '/gp2/filter-objects/' + str(GP_ID)
+    url_text = 'http://api.cleerio.' + domain + '/gp2/filter-objects/' + str(GP_ID)
     data_params = """{"controlers":[],"ids_only":0,"layer_ids":[%s],
                      "object_type_ids":[%s],"paging":null,"geometries":[],
                      "order":[]}""" %(layer_id, object_type_id)       
