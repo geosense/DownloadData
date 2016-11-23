@@ -89,4 +89,5 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
                                                                   self.tr("shapefile (*.shp)")) + ".shp")
 	self.images.setEnabled(True)
         self.documents.setEnabled(True)
+        self.button_box.setEnabled(True)
 
