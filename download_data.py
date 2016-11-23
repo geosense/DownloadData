@@ -29,12 +29,14 @@ from PyQt4 import QtCore, QtGui
 import os.path
 import json
 from qgis.gui import QgsMessageBar
-COMBINATIONS = []
 from download_data_dialog import DownloadDataDialog
 import tempfile
 import sqlite3
 import unicodedata
 import time
+
+COMBINATIONS = []
+GEOM_TYPE = None
 
 
 def _import_modules():
@@ -284,7 +286,7 @@ class DownloadData:
             selected_layer = selected_item[0].text(0)
             
             output_dir_cleerio = self.create_output_dir()
-            (obj_id, layer_id, crs) = get_object_layer_id_crs(selected_layer)
+            (obj_id, layer_id, crs, geom_type) = get_object_layer_id_crs(selected_layer)
 
             (properties,relation_ids,relations_ids, image_ids, document_ids, link_ids, iframe_ids, id_list_ids, id_list_values) = sort_attributes(obj_id)
 
@@ -299,17 +301,19 @@ class DownloadData:
             export_file = self.dlg.outputDir.text()
 
             geojson_path = os.path.join(output_dir_cleerio,'downloaded_data.json')
-                            
+        
             with open(geojson_path, 'w') as outfile:
                 json.dump(full_json, outfile)
        
-            vlayer = QgsVectorLayer(geojson_path,"mygeojson","ogr")
-            _writer = QgsVectorFileWriter.writeAsVectorFormat(vlayer,export_file,"utf-8",None,"ESRI Shapefile")       
+            vlayer = QgsVectorLayer(geojson_path,os.path.splitext(os.path.basename(export_file))[0],"ogr")
             
-            shplayer = QgsVectorLayer(export_file, os.path.splitext(os.path.basename(export_file))[0], "ogr")
-            QgsMapLayerRegistry.instance().addMapLayer(shplayer)
-            db_name = os.path.join(output_dir_cleerio, "cleerio_data")
-            QgsVectorFileWriter.writeAsVectorFormat( vlayer,
+            if geom_type != "NonGeometry":
+                _writer = QgsVectorFileWriter.writeAsVectorFormat(vlayer,export_file,"utf-8",None,"ESRI Shapefile")       
+                shplayer = QgsVectorLayer(export_file, os.path.splitext(os.path.basename(export_file))[0], "ogr")
+                QgsMapLayerRegistry.instance().addMapLayer(shplayer)
+                db_name = os.path.join(output_dir_cleerio, "cleerio_data")
+            
+                QgsVectorFileWriter.writeAsVectorFormat( vlayer,
                                                  db_name,
                                                  "utf-8",
                                                  None,
@@ -317,10 +321,10 @@ class DownloadData:
                                                  False,
                                                  None,
                                                  ["SPATIALITE=YES",] )
-            progress.setValue(100)
-            sqlitelayer =  QgsVectorLayer(db_name+".sqlite", "sqlite_vrtstva", "ogr")
-            QgsMapLayerRegistry.instance().addMapLayer(sqlitelayer)
-
+                sqlitelayer =  QgsVectorLayer(db_name+".sqlite", "sqlite_vrtstva", "ogr")
+                QgsMapLayerRegistry.instance().addMapLayer(sqlitelayer)
+            else:
+                QgsMapLayerRegistry.instance().addMapLayer(vlayer)            
 
             self.write_info(properties,output_dir_cleerio)
             self.iface.messageBar().clearWidgets()
@@ -442,12 +446,14 @@ def get_object_layer_id_crs(selected_layer):
     obj_id = int
     layer_id = int
     crs = None
+    geom_type = None
     for layer_object in COMBINATIONS:
         if layer_object['name'] == selected_layer:
             obj_id = layer_object['object_type_id']
             layer_id = layer_object['layer_id']
             crs = layer_object['crs']
-    return (obj_id, layer_id, crs)   
+            geom_type = layer_object['geom_type']
+    return (obj_id, layer_id, crs, geom_type)   
 
 
 
@@ -477,7 +483,9 @@ def set_objects(self):
                     self.dlg.treeWidget.addTopLevelItem(layer_item)
                     new_comb['object_type_id'] = object_type['id']
                     new_comb['crs'] = layer['projection']
+                    new_comb['geom_type'] = object_type['geometry_type']
                     COMBINATIONS.append(new_comb)
+    
 
     self.dlg.treeWidget.setEnabled(True)
     self.dlg.outputDir.setEnabled(True)
