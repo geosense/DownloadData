@@ -31,6 +31,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
+
     def __init__(self, parent=None):
         """Constructor."""
         super(DownloadDataDialog, self).__init__(parent)
@@ -38,10 +39,10 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         # After setupUI you can access any designer object by doing
         # self.<objectname>, and you can use autoconnect slots - see
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
-        # #widgets-and-dialogs-with-auto-connect
+        # widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
-	self.treeWidget.clicked.connect(self.enable_output)
+        self.treeWidget.clicked.connect(self.enable_output)
         self.outputDirButton.clicked.connect(self.selectdir)
 
     def import_error_message(self, modules):
@@ -53,22 +54,22 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         msg.setText(self.tr("Nepodařilo se načít některé důležité moduly"))
         msg.setWindowTitle(self.tr("Chyba při importu modulů"))
         msg.setInformativeText(self.tr(
-            "Bohužel se nepodařilo načíst některé důležité moduly:\n\n" \
-            "  {}\n\n" \
-            "Zřejmě je nemáte nainstalované ve vašem systému.\n\n" \
-            "Návod na instalaci chybějících modulů můžete nalézt " \
+            "Bohužel se nepodařilo načíst některé důležité moduly:\n\n"
+            "  {}\n\n"
+            "Zřejmě je nemáte nainstalované ve vašem systému.\n\n"
+            "Návod na instalaci chybějících modulů můžete nalézt "
             "níže:").format(", ".join(modules)))
 
         how_to = ''
         pip = ""
         import platform
         if platform.system() == 'Windows':
-            how_to = self.tr("Pro instalaci chybějích modulů spusťte příkazovou " \
-            "řádku Windows (cmd) a v ní spusťte následující příkaz: \n\n")
+            how_to = self.tr("Pro instalaci chybějích modulů spusťte příkazovou "
+                             "řádku Windows (cmd) a v ní spusťte následující příkaz: \n\n")
             pip = "C:\\OSGeo4W\\apps\\Python27\\Scripts\\pip.exe"
         else:
-            how_to = self.tr("Pro instalaci chybějích modulů spusťte příkazovou " \
-            "řádku a použijte příkaz: \n\n")
+            how_to = self.tr("Pro instalaci chybějích modulů spusťte příkazovou "
+                             "řádku a použijte příkaz: \n\n")
             pip = "pip"
 
         for module in modules:
@@ -84,10 +85,11 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
 
     def selectdir(self):
         self.outputDir.setText(QtGui.QFileDialog.getSaveFileName(self,
-                                                                  self.tr("Save Outup as *.shp"),
-                                                                  QtCore.QDir.homePath(),
-                                                                  self.tr("shapefile (*.shp)")) + ".shp")
-	self.images.setEnabled(True)
+                                                                 self.tr(
+                                                                 "Save Outup as *.shp"),
+                                                                 QtCore.QDir.homePath(
+                                                                 ),
+                                                                 self.tr("shapefile (*.shp)")) + ".shp")
+        self.images.setEnabled(True)
         self.documents.setEnabled(True)
         self.button_box.setEnabled(True)
-
