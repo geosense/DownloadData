@@ -67,6 +67,9 @@
          <height>0</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Cleerio domain name&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Pick Cleerio domain name, you would like to download data from&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
       </widget>
      </item>
      <item>
@@ -100,6 +103,9 @@
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Map Application name&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Type name of map application, you need to list layers from.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </item>
@@ -186,8 +192,11 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Connect to map application and get list of available data layers&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
-      <string>Dostupná data (získání trvá pár vteřin)</string>
+      <string>Connect</string>
      </property>
     </widget>
    </item>
@@ -196,12 +205,16 @@
      <item>
       <widget class="QLabel" name="label_4">
        <property name="text">
-        <string>Dosupné:</string>
+        <string>Available
+layers:</string>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QTreeWidget" name="treeWidget">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;List of available layers&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Pick one layer from available layers you wish to download data from.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <attribute name="headerVisible">
         <bool>false</bool>
        </attribute>
