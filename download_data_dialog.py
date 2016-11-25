@@ -93,3 +93,30 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         self.images.setEnabled(True)
         self.documents.setEnabled(True)
         self.button_box.setEnabled(True)
+
+    def show(self):
+
+        # domains
+        self.domain.clear()
+        self.domain.setEnabled(True)
+        domains = ['cz', 'sk', 'com']
+        self.domain.addItems(domains)
+
+        self.getData.setEnabled(True)
+        self.maName.setEnabled(True)
+        self.checkBox.setEnabled(True)
+        self.checkBox.setChecked(True)
+        self.userName.setDisabled(True)
+        self.userPassword.setDisabled(True)
+        self.button_box.setDisabled(True)
+        self.outputDir.setDisabled(True)
+        self.outputDir.clear()
+        self.outputDirButton.setDisabled(True)
+        self.treeWidget.clear()
+        self.treeWidget.setDisabled(True)
+        self.images.setDisabled(True)
+        self.images.setChecked(False)
+        self.documents.setDisabled(True)
+        self.documents.setChecked(False)
+
+        return super(DownloadDataDialog, self)

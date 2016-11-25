@@ -20,6 +20,12 @@
  *                                                                         *
  ***************************************************************************/
 """
+# py3 compatiblity
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 from PyQt4.QtCore import *
 from PyQt4.QtCore import pyqtSlot
 from qgis.core import *
@@ -35,8 +41,7 @@ import sqlite3
 import unicodedata
 import time
 
-COMBINATIONS = []
-GEOM_TYPE = None
+SESSION = None
 
 
 def _import_modules():
@@ -75,14 +80,15 @@ class DownloadData:
 
         # Save reference to the QGIS interface
         self.iface = iface
+
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
+
         # initialize locale
         locale = QSettings().value('locale/userLocale')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'download_data_{}.qm'.format(locale))
+
+        locale_path = os.path.join(self.plugin_dir, 'i18n',
+                'download_data_{}.qm'.format(locale))
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -101,6 +107,17 @@ class DownloadData:
         self.toolbar = self.iface.addToolBar(u'DownloadData')
         self.toolbar.setObjectName(u'DownloadData')
 
+        self.combinations = []
+        self.response = {}
+        self.name = None
+        self.user = None
+        self.password = None
+        self.domain = None
+
+        self.gp_id = None
+        self.layers = None
+        self.object_types = None
+
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -116,16 +133,8 @@ class DownloadData:
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('DownloadData', message)
 
-    def add_action(
-        self,
-        icon_path,
-        text,
-        callback,
-        enabled_flag=True,
-        add_to_menu=True,
-        add_to_toolbar=True,
-        status_tip=None,
-        whats_this=None,
+    def add_action( self, icon_path, text, callback, enabled_flag=True,
+        add_to_menu=True, add_to_toolbar=True, status_tip=None, whats_this=None,
             parent=None):
         """Add a toolbar icon to the toolbar.
 
@@ -209,13 +218,107 @@ class DownloadData:
         # remove the toolbar
         del self.toolbar
 
-    def set_domains(self):
-        self.dlg.domain.clear()
-        self.dlg.domain.setEnabled(True)
-        domains = ['cz', 'sk', 'com']
-        self.dlg.domain.addItems(domains)
+    def run(self):
+        """Run method that performs all the real work"""
+        # show the dialog
+        self.dlg.show()
+
+        # try to import necessary python modules
+        false_imports = _import_modules()
+        if len(false_imports):
+            self.dlg.import_error_message(false_imports)
+
+
+        self.dlg.getData.clicked.connect(lambda: self.set_objects())
+
+        # Run the dialog event loop
+        result = self.dlg.exec_()
+
+        # See if OK button was clicked
+        if result:
+            self.save_objects()
+
+    def save_objects(self):
+        """Save required objects in result
+        """
+
+        #object_types
+        progress = self._set_progressbar()
+
+        selected_item = self.dlg.treeWidget.selectedItems()
+        selected_layer = selected_item[0].text(0)
+
+        output_dir_cleerio = self.create_output_dir()
+        (obj_id, layer_id, crs, geom_type) = get_object_layer_id_crs(
+            selected_layer, self.combinations)
+
+        (properties, relation_ids, relations_ids, image_ids, document_ids,
+         link_ids, iframe_ids, id_list_ids, id_list_values) = sort_attributes(obj_id, self.object_types)
+
+        data_raw = get_object_type_data(layer_id, obj_id, self.dlg.domain.currentText(), self.gp_id)
+
+        json_no_crs = byteify(json.loads(data_raw.text, encoding="utf-8"))
+        json_crs = add_crs_definition(json_no_crs, crs)
+
+        full_json = self.change_attributes( json_crs, properties, relation_ids,
+            relations_ids, image_ids, document_ids, link_ids, iframe_ids,
+            id_list_ids, id_list_values, output_dir_cleerio, progress)
+        export_file = self.dlg.outputDir.text()
+
+        geojson_path = os.path.join(output_dir_cleerio, 'downloaded_data.json')
+
+        with open(geojson_path, 'w') as outfile:
+            json.dump(full_json, outfile)
+
+        vlayer = QgsVectorLayer(geojson_path,
+                os.path.splitext(os.path.basename(export_file))[0], "ogr")
+
+        if geom_type != "NonGeometry":
+            _writer = QgsVectorFileWriter.writeAsVectorFormat(
+                vlayer, export_file, "utf-8", None, "ESRI Shapefile")
+            shplayer = QgsVectorLayer( export_file,
+                os.path.splitext(os.path.basename(export_file))[0], "ogr")
+            QgsMapLayerRegistry.instance().addMapLayer(shplayer)
+            db_name = os.path.join(output_dir_cleerio, "cleerio_data")
+
+            QgsVectorFileWriter.writeAsVectorFormat(vlayer, db_name, "utf-8",
+                                                    None, 'SQLite', False,
+                                                    None, ["SPATIALITE=YES"])
+            sqlitelayer = QgsVectorLayer( db_name + ".sqlite", "sqlite_vrtstva", "ogr")
+            QgsMapLayerRegistry.instance().addMapLayer(sqlitelayer)
+        else:
+            QgsMapLayerRegistry.instance().addMapLayer(vlayer)
+
+        self.write_info(properties, output_dir_cleerio)
+        self.iface.messageBar().clearWidgets()
+        text_msg = self.tr("Downloading finished, data are stored to directory\n{}").format(output_dir_cleerio)
+        msgBox = QMessageBox()
+        msgBox.setText(text_msg)
+        msgBox.setIcon(QMessageBox.Information)
+        msgBox.exec_()
+
+    def _set_progressbar(self):
+        """Set QGIS progress bar and display progress
+        """
+
+        progressMessageBar = self.iface.messageBar().createMessage("Zpracovávám objekty")
+        progress = QProgressBar()
+        progress.setMaximum(100)
+        progress.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        progressMessageBar.layout().addWidget(progress)
+        self.iface.messageBar().pushWidget(
+            progressMessageBar, self.iface.messageBar().INFO)
+        progress.setValue(2)
+
+        return progress
 
     def create_output_dir(self):
+        """Create output directory
+
+        Directory is created in qgisSettigsDirPath and is called 'CLEERIO_data'
+
+        it usually leads to ~/.qgis2/CLEERIO_data
+        """
         cleerio_dir = os.path.normpath(
             os.path.join(QgsApplication.qgisSettingsDirPath(), 'CLEERIO_data'))
         if not os.path.exists(cleerio_dir):
@@ -234,150 +337,155 @@ class DownloadData:
         return output_dir_cleerio
 
     def write_info(self, properties, output_dir_cleerio):
-        text_file = open(
-            os.path.join(
-                output_dir_cleerio,
-                'LOG_MESSAGE.txt'),
-            "w")
-        text_file.write("Atributy dat:")
-        for property in properties:
-            property_def = '\n' + properties[
-                property][
-                    'label'] + ' = ' + properties[
-                        property][
-                'name']
-            text_file.write(property_def)
+        text_file = open(os.path.join(output_dir_cleerio,'LOG_MESSAGE.txt'), "w")
+        text_file.write(self.tr("Atributy dat:"))
+        for prop in properties:
+            print(properties[prop]['label'], properties[prop]['name'])
+            prop_def = u'\n{} = {}'.format(properties[prop]['label'], properties[prop]['name'])
+            text_file.write(prop_def)
         text_file.close()
 
-    def run(self):
-        """Run method that performs all the real work"""
-        # show the dialog
-        self.set_domains()
-        self.dlg.getData.setEnabled(True)
-        self.dlg.maName.setEnabled(True)
-        self.dlg.checkBox.setEnabled(True)
-        self.dlg.checkBox.setChecked(True)
-        self.dlg.userName.setDisabled(True)
-        self.dlg.userPassword.setDisabled(True)
-        self.dlg.button_box.setDisabled(True)
-        self.dlg.outputDir.setDisabled(True)
-        self.dlg.outputDir.clear()
-        self.dlg.outputDirButton.setDisabled(True)
+    def change_attributes(self, input_json,
+        properties, relation_ids, relations_ids, image_ids,
+        document_ids, link_ids, iframe_ids, id_list_ids, id_list_values,
+        output_dir, progress):
+
+        feature_count = len(input_json['features'])
+        counter = 0
+        for feature in input_json['features']:
+            for prop_id in feature['properties'].keys():
+                if prop_id not in ('layers', 'label', 'id', 'object_type_id'):
+                    prop_name = properties[prop_id]['name']
+                    value = ''
+                    if int(prop_id) in relation_ids and feature['properties'][prop_id] is not None:
+                        value = feature['properties'][prop_id]['id']
+                    elif int(prop_id) in relations_ids and feature['properties'][prop_id] is not None:
+                        related = []
+                        for rel_object in feature['properties'][prop_id]['objects']:
+                            related.append(rel_object['id'])
+                        value = str(related)
+                    elif int(prop_id) in image_ids and feature['properties'][prop_id] is not None:
+                        value = feature['properties'][prop_id]['src']
+                        if self.dlg.images.isChecked():
+                            download_files(
+                                'images',
+                                value,
+                                feature['properties'][prop_id]['id'],
+                                output_dir)
+                    elif int(prop_id) in document_ids and feature['properties'][prop_id] is not None:
+                        value = feature['properties'][prop_id]['src']
+                        if self.dlg.documents.isChecked():
+                            download_files(
+                                'documents',
+                                value,
+                                feature['properties'][prop_id]['id'],
+                                output_dir)
+                    elif int(prop_id) in link_ids and feature['properties'][prop_id] is not None:
+                        value = feature['properties'][prop_id]['link']
+                    elif int(prop_id) in iframe_ids and feature['properties'][prop_id] is not None:
+                        value = feature['properties'][prop_id]['src']
+                    elif int(prop_id) in id_list_ids and feature['properties'][prop_id] is not None:
+                        value = id_list_values[feature['properties'][prop_id]]
+                    else:
+                        value = feature['properties'][prop_id]
+                    input_json[
+                        'features'][
+                            counter][
+                                'properties'][
+                                    prop_name] = value
+                    del input_json['features'][counter]['properties'][prop_id]
+                elif prop_id in ('label', 'object_type_id', 'layers'):
+                    del input_json['features'][counter]['properties'][prop_id]
+            counter += 1
+            progress.setValue(int((counter / float(feature_count)) * 96 + 2))
+
+        if self.dlg.images.isChecked() or self.dlg.documents.isChecked():
+            clean_output_dir(output_dir)
+        return input_json
+
+    def set_objects(self):
+        """This function is running after "Connect" button is hit and will
+        download data from the server
+        """
+
+        def create_combination(layer, object_type):
+            """Create combination of layers and object types
+            """
+            new_comb = {}
+            new_comb['name'] = (layer['name']).decode("utf-8") + \
+                    ' - ' + (object_type['name']).decode("utf-8")
+            new_comb['layer_id'] = layer['id']
+            new_comb['object_type_id'] = object_type['id']
+            new_comb['crs'] = layer['projection']
+            new_comb['geom_type'] = object_type['geometry_type']
+
+            return new_comb
+
+        self.dlg.getData.setDisabled(True)
         self.dlg.treeWidget.clear()
         self.dlg.treeWidget.setDisabled(True)
-        self.dlg.images.setDisabled(True)
-        self.dlg.images.setChecked(False)
-        self.dlg.documents.setDisabled(True)
-        self.dlg.documents.setChecked(False)
+        QCoreApplication.processEvents()
+        self.combinations = []
 
-        self.dlg.show()
+        environment = self.get_input_variables()
 
-        false_imports = _import_modules()
-        if len(false_imports):
-            self.dlg.import_error_message(false_imports)
+        response = get_user_data(self.domain, self.name)
+        self.layers = response['result']['layers']
+        self.object_types = response['result']['objectTypes']
+
+        for layer in self.layers:
+            if layer['type'] in('unip', 'htable'):
+                layer_object_types = layer['object_type_ids']
+
+                for object_type in self.object_types:
+                    if object_type['id'] in layer_object_types:
+                        combination = create_combination(layer, object_type)
+                        self.combinations.append(combination)
+                        layer_item = QtGui.QTreeWidgetItem([combination["name"]])
+                        self.dlg.treeWidget.addTopLevelItem(layer_item)
+
+        self.dlg.treeWidget.setEnabled(True)
+        self.dlg.getData.setEnabled(True)
+        self.dlg.outputDir.setEnabled(True)
+
+    def get_input_variables(self):
+        global SESSION
+
+        self.domain = self.dlg.domain.currentText()
+        self.name = self.dlg.maName.text()
+        self.user = self.dlg.userName.text()
+        self.password = self.dlg.userPassword.text()
+
+        SESSION = requests.session()
+
+        no_login = self.dlg.checkBox.isChecked()
+
+        env_data = get_environment_data(self.domain, self.name)
 
         try:
-            self.dlg.getData.clicked.connect(lambda: set_objects(self))
+            self.gp_id = env_data['result']['gpId']
         except Exception as e:
-            raise
-        # Run the dialog event loop
-        result = self.dlg.exec_()
-        # See if OK was pressed
-        if result:
-            progressMessageBar = self.iface.messageBar().createMessage(
-                "Zpracovávám objekty".decode('utf-8'))
-            progress = QProgressBar()
-            progress.setMaximum(100)
-            progress.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            progressMessageBar.layout().addWidget(progress)
-            self.iface.messageBar().pushWidget(
-                progressMessageBar, self.iface.messageBar().INFO)
-            progress.setValue(2)
-
-            selected_item = self.dlg.treeWidget.selectedItems()
-            selected_layer = selected_item[0].text(0)
-
-            output_dir_cleerio = self.create_output_dir()
-            (obj_id, layer_id, crs, geom_type) = get_object_layer_id_crs(
-                selected_layer)
-
-            (properties, relation_ids, relations_ids, image_ids, document_ids,
-             link_ids, iframe_ids, id_list_ids, id_list_values) = sort_attributes(obj_id)
-
-            data_raw = get_object_type_data(
-                layer_id,
-                obj_id,
-                self.dlg.domain.currentText())
-
-            json_no_crs = byteify(json.loads(data_raw.text, encoding="utf-8"))
-
-            json_crs = add_crs_definition(json_no_crs, crs)
-
-            full_json = change_attributes(
-                self,
-                json_crs,
-                properties,
-                relation_ids,
-                relations_ids,
-                image_ids,
-                document_ids,
-                link_ids,
-                iframe_ids,
-                id_list_ids,
-                id_list_values,
-                output_dir_cleerio,
-                progress)
-            export_file = self.dlg.outputDir.text()
-
-            geojson_path = os.path.join(
-                output_dir_cleerio,
-                'downloaded_data.json')
-
-            with open(geojson_path, 'w') as outfile:
-                json.dump(full_json, outfile)
-
-            vlayer = QgsVectorLayer(
-                geojson_path,
-                os.path.splitext(os.path.basename(export_file))[0],
-                "ogr")
-
-            if geom_type != "NonGeometry":
-                _writer = QgsVectorFileWriter.writeAsVectorFormat(
-                    vlayer, export_file, "utf-8", None, "ESRI Shapefile")
-                shplayer = QgsVectorLayer(
-                    export_file,
-                    os.path.splitext(os.path.basename(export_file))[0],
-                    "ogr")
-                QgsMapLayerRegistry.instance().addMapLayer(shplayer)
-                db_name = os.path.join(output_dir_cleerio, "cleerio_data")
-
-                QgsVectorFileWriter.writeAsVectorFormat(vlayer,
-                                                        db_name,
-                                                        "utf-8",
-                                                        None,
-                                                        'SQLite',
-                                                        False,
-                                                        None,
-                                                        ["SPATIALITE=YES", ])
-                sqlitelayer = QgsVectorLayer(
-                    db_name + ".sqlite",
-                    "sqlite_vrtstva",
-                    "ogr")
-                QgsMapLayerRegistry.instance().addMapLayer(sqlitelayer)
-            else:
-                QgsMapLayerRegistry.instance().addMapLayer(vlayer)
-
-            self.write_info(properties, output_dir_cleerio)
-            self.iface.messageBar().clearWidgets()
-            text_msg = (
-                "Stahování proběhlo, podrobná data jsou ve složce \n%s").decode(
-                    "utf-8") % output_dir_cleerio
+            text_msg = ("MA '" + self.name + "' nenalezena!").decode("utf-8")
             msgBox = QMessageBox()
             msgBox.setText(text_msg)
-            msgBox.setIcon(QMessageBox.Information)
+            msgBox.setIcon(QMessageBox.Question)
             msgBox.exec_()
+            exc = Exception
+            return exc
+        if no_login == False:
+            login_data = try_user_login(self.domain, self.user, self.password, self.gp_id)
+            try:
+                login_status = login_data['result']
+            except Exception as e:
+                text_msg = ("Špatné přihlašovací údaje").decode("utf-8")
+                msgBox = QMessageBox()
+                msgBox.setText(text_msg)
+                msgBox.setIcon(QMessageBox.Question)
+                msgBox.exec_()
+                exc = Exception
+                return exc
+        return env_data
 
-            pass
 
 
 def download_files(file_type, url, id_name, output_dir):
@@ -407,65 +515,7 @@ def add_crs_definition(json, crs_def):
     return json
 
 
-def change_attributes(
-    self, input_json, properties, relation_ids, relations_ids, image_ids,
-                      document_ids, link_ids, iframe_ids, id_list_ids, id_list_values, output_dir, progress):
-
-    feature_count = len(input_json['features'])
-    counter = 0
-    for feature in input_json['features']:
-        for prop_id in feature['properties'].keys():
-            if prop_id not in ('layers', 'label', 'id', 'object_type_id'):
-                prop_name = properties[prop_id]['name']
-                value = ''
-                if int(prop_id) in relation_ids and feature['properties'][prop_id] is not None:
-                    value = feature['properties'][prop_id]['id']
-                elif int(prop_id) in relations_ids and feature['properties'][prop_id] is not None:
-                    related = []
-                    for rel_object in feature['properties'][prop_id]['objects']:
-                        related.append(rel_object['id'])
-                    value = str(related)
-                elif int(prop_id) in image_ids and feature['properties'][prop_id] is not None:
-                    value = feature['properties'][prop_id]['src']
-                    if self.dlg.images.isChecked():
-                        download_files(
-                            'images',
-                            value,
-                            feature['properties'][prop_id]['id'],
-                            output_dir)
-                elif int(prop_id) in document_ids and feature['properties'][prop_id] is not None:
-                    value = feature['properties'][prop_id]['src']
-                    if self.dlg.documents.isChecked():
-                        download_files(
-                            'documents',
-                            value,
-                            feature['properties'][prop_id]['id'],
-                            output_dir)
-                elif int(prop_id) in link_ids and feature['properties'][prop_id] is not None:
-                    value = feature['properties'][prop_id]['link']
-                elif int(prop_id) in iframe_ids and feature['properties'][prop_id] is not None:
-                    value = feature['properties'][prop_id]['src']
-                elif int(prop_id) in id_list_ids and feature['properties'][prop_id] is not None:
-                    value = id_list_values[feature['properties'][prop_id]]
-                else:
-                    value = feature['properties'][prop_id]
-                input_json[
-                    'features'][
-                        counter][
-                            'properties'][
-                                prop_name] = value
-                del input_json['features'][counter]['properties'][prop_id]
-            elif prop_id in ('label', 'object_type_id', 'layers'):
-                del input_json['features'][counter]['properties'][prop_id]
-        counter += 1
-        progress.setValue(int((counter / float(feature_count)) * 96 + 2))
-
-    if self.dlg.images.isChecked() or self.dlg.documents.isChecked():
-        clean_output_dir(output_dir)
-    return input_json
-
-
-def sort_attributes(object_id):
+def sort_attributes(object_id, object_types):
     properties = {}
     relation_ids = []
     relations_ids = []
@@ -475,7 +525,7 @@ def sort_attributes(object_id):
     iframe_ids = []
     id_list_ids = []
     id_list_values = {}
-    for object_type in LAYERS_AVAILABLE['result']['objectTypes']:
+    for object_type in object_types:
         if object_type['id'] == object_id:
             for prop in object_type['controlers']:
                 propert = {}
@@ -503,12 +553,12 @@ def sort_attributes(object_id):
     return(properties, relation_ids, relations_ids, image_ids, document_ids, link_ids, iframe_ids, id_list_ids, id_list_values)
 
 
-def get_object_layer_id_crs(selected_layer):
+def get_object_layer_id_crs(selected_layer, combinations):
     obj_id = int
     layer_id = int
     crs = None
     geom_type = None
-    for layer_object in COMBINATIONS:
+    for layer_object in combinations:
         if layer_object['name'] == selected_layer:
             obj_id = layer_object['object_type_id']
             layer_id = layer_object['layer_id']
@@ -517,86 +567,14 @@ def get_object_layer_id_crs(selected_layer):
     return (obj_id, layer_id, crs, geom_type)
 
 
-def set_objects(self):
-    environment = get_input_variables(self, self.dlg.domain.currentText())
-    try:
-        vysledek = environment['result']
-    except Exception as e:
-        exc = Exception
-        return exc
 
-    self.dlg.treeWidget.clear()
-    self.dlg.treeWidget.setDisabled(True)
-
-    global LAYERS_AVAILABLE
-    LAYERS_AVAILABLE = get_user_data(self.dlg.domain.currentText())
-    for layer in LAYERS_AVAILABLE['result']['layers']:
-        if layer['type'] in('unip', 'htable'):
-            layer_object_types = layer['object_type_ids']
-
-            for object_type in LAYERS_AVAILABLE['result']['objectTypes']:
-                if object_type['id'] in layer_object_types:
-                    new_comb = {}
-                    new_comb['name'] = (layer['name']).decode(
-                        "utf-8") + ' - ' + (object_type['name']).decode("utf-8")
-                    new_comb['layer_id'] = layer['id']
-                    layer_item = QtGui.QTreeWidgetItem([new_comb["name"]])
-                    self.dlg.treeWidget.addTopLevelItem(layer_item)
-                    new_comb['object_type_id'] = object_type['id']
-                    new_comb['crs'] = layer['projection']
-                    new_comb['geom_type'] = object_type['geometry_type']
-                    COMBINATIONS.append(new_comb)
-
-    self.dlg.treeWidget.setEnabled(True)
-    self.dlg.outputDir.setEnabled(True)
-
-
-def get_input_variables(self, domain):
-    global NAME
-    global NO_LOGIN
-    global USER
-    global PASSWORD
-    global GP_ID
-    global SESSION
-
-    NAME = self.dlg.maName.text()
-    USER = self.dlg.userName.text()
-    PASSWORD = self.dlg.userPassword.text()
-    NO_LOGIN = self.dlg.checkBox.isChecked()
-    SESSION = requests.session()
-
-    env_data = get_environment_data(domain)
-
-    try:
-        GP_ID = env_data['result']['gpId']
-    except Exception as e:
-        text_msg = ("MA '" + NAME + "' nenalezena!").decode("utf-8")
-        msgBox = QMessageBox()
-        msgBox.setText(text_msg)
-        msgBox.setIcon(QMessageBox.Question)
-        msgBox.exec_()
-        exc = Exception
-        return exc
-    if NO_LOGIN == False:
-        login_data = try_user_login(domain)
-        try:
-            login_status = login_data['result']
-        except Exception as e:
-            text_msg = ("Špatné přihlašovací údaje").decode("utf-8")
-            msgBox = QMessageBox()
-            msgBox.setText(text_msg)
-            msgBox.setIcon(QMessageBox.Question)
-            msgBox.exec_()
-            exc = Exception
-            return exc
-    return env_data
-
-
-def get_environment_data(domain):
+def get_environment_data(domain, name):
     """
     Get infromation abour MA
     """
-    url_text = 'http://api.cleerio.' + domain + '/gp2/get-environment/' + NAME
+    global SESSION
+
+    url_text = 'http://api.cleerio.' + domain + '/gp2/get-environment/' + name
     result = SESSION.post(url_text)
     response = byteify(json.loads(result.text, encoding="utf-8"))
 
@@ -609,11 +587,11 @@ def get_environment_data(domain):
     return response
 
 
-def try_user_login(domain):
-    login = 'http://api.cleerio.' + domain + '/gp2/sign-in/' + str(GP_ID)
-    login_data = '{"username":"%s","password":"%s"}' % (USER, PASSWORD)
+def try_user_login(domain, user, password, gp_id):
+    login = 'http://api.cleerio.' + domain + '/gp2/sign-in/' + str(gp_id)
+    login_data = {"username": user,"password": password}
 
-    log_in = SESSION.post(login, data=login_data)
+    log_in = SESSION.post(login, data=json.dumps(login_data))
     response = byteify(json.loads(log_in.text, encoding="utf-8"))
 
     try:
@@ -624,13 +602,14 @@ def try_user_login(domain):
     return response
 
 
-def get_user_data(domain):
+def get_user_data(domain, name):
     """
     Get list of layer and object types  with read right to user
     """
+    global SESSION
+
     service_url = 'http://api.cleerio.' + \
-        domain + '/gp2/get-environment/' + NAME
-    login_data = '{"username":"%s","password":"%s"}' % (USER, PASSWORD)
+        domain + '/gp2/get-environment/' + name
 
     response_file = SESSION.post(service_url)
 
@@ -639,18 +618,16 @@ def get_user_data(domain):
     return response
 
 
-def get_object_type_data(layer_id, object_type_id, domain):
+def get_object_type_data(layer_id, object_type_id, domain, gp_id):
     """
     Get GEOJSON by GP_ID, LAYER_ID and OBJECT_TYPE_ID
     """
+    global SESSION
     url_text = 'http://api.cleerio.' + \
-        domain + '/gp2/filter-objects/' + str(GP_ID)
+        domain + '/gp2/filter-objects/' + str(gp_id)
     data_params = """{"controlers":[],"ids_only":0,"layer_ids":[%s],
                      "object_type_ids":[%s],"paging":null,"geometries":[],
                      "order":[]}""" % (layer_id, object_type_id)
-    # url = 'http://api.' + domain + '/gp2/sign-in/' + str(GP_ID)
-    # logout = 'http://api.' + domain + '/admin/default/logout?gpId=%s#' %GP_ID
-    # login_data = '{"username":"%s","password":"%s"}' %(USER,PASSWORD)
 
     s = SESSION.post(url_text, data_params)
 
