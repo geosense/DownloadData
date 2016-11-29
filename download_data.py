@@ -24,7 +24,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from __future__ import unicode_literals
 
 from PyQt4.QtCore import *
 from PyQt4.QtCore import pyqtSlot
@@ -34,7 +33,6 @@ from . import resources
 from PyQt4 import QtCore, QtGui
 import os.path
 import json
-from qgis.gui import QgsMessageBar
 from .download_data_dialog import DownloadDataDialog
 import tempfile
 import sqlite3
@@ -117,6 +115,7 @@ class DownloadData:
         self.gp_id = None
         self.layers = None
         self.object_types = None
+        self.overwrite = None
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -242,13 +241,37 @@ class DownloadData:
         """Save required objects in result
         """
 
+        # output configuration
+        output_dir = self.dlg.outputDir.text()
+        output_file_name = os.path.join(output_dir, self.dlg.outputFile.text())
+
+        if os.path.isfile(os.path.join(output_dir, 'downloaded_data.json')):
+
+                msgBox = QMessageBox()
+                msgBox.setText(
+                    self.tr("Target file exists. Overwrite?")
+                )
+                msgBox.setIcon(QMessageBox.Warning)
+                msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+                overwrite = msgBox.exec_()
+
+                if overwrite == QMessageBox.Yes:
+                    self.overwrite = True
+                elif overwrite == QMessageBox.No:
+                    self.overwrite = False
+                    return
+                else:
+                    self.overwrite = "Maybe"
+                    return
+
         #object_types
         progress = self._set_progressbar()
 
         selected_item = self.dlg.treeWidget.selectedItems()
         selected_layer = selected_item[0].text(0)
 
-        output_dir_cleerio = self.create_output_dir()
+        self.set_output_dir(output_dir)
+
         (obj_id, layer_id, crs, geom_type) = get_object_layer_id_crs(
             selected_layer, self.combinations)
 
@@ -262,46 +285,57 @@ class DownloadData:
 
         full_json = self.change_attributes( json_crs, properties, relation_ids,
             relations_ids, image_ids, document_ids, link_ids, iframe_ids,
-            id_list_ids, id_list_values, output_dir_cleerio, progress)
-        export_file = self.dlg.outputDir.text()
+            id_list_ids, id_list_values, output_dir, progress)
 
-        geojson_path = os.path.join(output_dir_cleerio, 'downloaded_data.json')
+
+        geojson_path = os.path.join(output_dir, 'downloaded_data.json')
 
         with open(geojson_path, 'w') as outfile:
             json.dump(full_json, outfile)
 
         vlayer = QgsVectorLayer(geojson_path,
-                os.path.splitext(os.path.basename(export_file))[0], "ogr")
+                os.path.splitext(os.path.basename(geojson_path))[0], "ogr")
 
         if geom_type != "NonGeometry":
-            _writer = QgsVectorFileWriter.writeAsVectorFormat(
-                vlayer, export_file, "utf-8", None, "ESRI Shapefile")
-            shplayer = QgsVectorLayer( export_file,
-                os.path.splitext(os.path.basename(export_file))[0], "ogr")
-            QgsMapLayerRegistry.instance().addMapLayer(shplayer)
-            db_name = os.path.join(output_dir_cleerio, "cleerio_data")
-
-            QgsVectorFileWriter.writeAsVectorFormat(vlayer, db_name, "utf-8",
-                                                    None, 'SQLite', False,
-                                                    None, ["SPATIALITE=YES"])
-            sqlitelayer = QgsVectorLayer( db_name + ".sqlite", "sqlite_vrtstva", "ogr")
-            QgsMapLayerRegistry.instance().addMapLayer(sqlitelayer)
+            layer = self.save_data_to_layer(vlayer, output_file_name)
+            QgsMapLayerRegistry.instance().addMapLayer(layer)
         else:
             QgsMapLayerRegistry.instance().addMapLayer(vlayer)
 
-        self.write_info(properties, output_dir_cleerio)
+        self.write_info(properties, output_dir)
         self.iface.messageBar().clearWidgets()
-        text_msg = self.tr("Downloading finished, data are stored to directory\n{}").format(output_dir_cleerio)
+        text_msg = self.tr("Downloading finished, data are stored to directory\n{}").format(output_dir)
         msgBox = QMessageBox()
         msgBox.setText(text_msg)
         msgBox.setIcon(QMessageBox.Information)
         msgBox.exec_()
 
+    def save_data_to_layer(self, vlayer, output_file_name):
+        """return QgsVectorFileWriter configured according to 
+        output file name
+        """
+        file_format = None
+        params = None
+        (name, ext) = os.path.splitext(os.path.basename(output_file_name))
+        if ext == ".shp" > 0:
+            file_format = 'ESRI Shapefile'
+            params = None
+        else:
+            file_format = 'SQLite'
+            params = ["SPATIALITE=YES"]
+
+        QgsVectorFileWriter.writeAsVectorFormat(
+            vlayer, output_file_name, "utf-8", None, file_format, False,
+            None, params)
+
+        layer = QgsVectorLayer(output_file_name, name, "ogr")
+        return layer
+
     def _set_progressbar(self):
         """Set QGIS progress bar and display progress
         """
 
-        progressMessageBar = self.iface.messageBar().createMessage("Zpracovávám objekty")
+        progressMessageBar = self.iface.messageBar().createMessage(self.tr("Zpracovávám objekty".decode("utf-8")))
         progress = QProgressBar()
         progress.setMaximum(100)
         progress.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
@@ -312,36 +346,30 @@ class DownloadData:
 
         return progress
 
-    def create_output_dir(self):
+    def set_output_dir(self, target_dir):
         """Create output directory
 
         Directory is created in qgisSettigsDirPath and is called 'CLEERIO_data'
 
         it usually leads to ~/.qgis2/CLEERIO_data
         """
-        cleerio_dir = os.path.normpath(
-            os.path.join(QgsApplication.qgisSettingsDirPath(), 'CLEERIO_data'))
-        if not os.path.exists(cleerio_dir):
-            os.mkdir(cleerio_dir)
-        output_dir_cleerio = tempfile.mkdtemp(
-            suffix='',
-            prefix='download_data_',
-            dir=cleerio_dir)
+
         if self.dlg.images.isChecked():
-            images_dir = os.path.join(output_dir_cleerio, "images")
-            os.mkdir(images_dir)
+            images_dir = os.path.join(target_dir, "images")
+            if not os.path.isdir(images_dir):
+                os.mkdir(images_dir)
         if self.dlg.documents.isChecked():
-            documents_dir = os.path.join(output_dir_cleerio, "documents")
-            os.mkdir(documents_dir)
+            documents_dir = os.path.join(target_dir, "documents")
+            if not os.path.isdir(documents_dir):
+                os.mkdir(documents_dir)
 
-        return output_dir_cleerio
-
-    def write_info(self, properties, output_dir_cleerio):
-        text_file = open(os.path.join(output_dir_cleerio,'LOG_MESSAGE.txt'), "w")
+    def write_info(self, properties, output_dir):
+        text_file = open(os.path.join(output_dir,'LOG_MESSAGE.txt'), "w")
         text_file.write(self.tr("Atributy dat:"))
         for prop in properties:
-            print(properties[prop]['label'], properties[prop]['name'])
-            prop_def = u'\n{} = {}'.format(properties[prop]['label'], properties[prop]['name'])
+            prop_def = '\n{} = {}'.format(properties[prop]['label'],
+                                           properties[prop]['name'])
+            print(prop_def)
             text_file.write(prop_def)
         text_file.close()
 
@@ -367,19 +395,11 @@ class DownloadData:
                     elif int(prop_id) in image_ids and feature['properties'][prop_id] is not None:
                         value = feature['properties'][prop_id]['src']
                         if self.dlg.images.isChecked():
-                            download_files(
-                                'images',
-                                value,
-                                feature['properties'][prop_id]['id'],
-                                output_dir)
+                            download_files('images', value, feature['properties'][prop_id]['id'], output_dir)
                     elif int(prop_id) in document_ids and feature['properties'][prop_id] is not None:
                         value = feature['properties'][prop_id]['src']
                         if self.dlg.documents.isChecked():
-                            download_files(
-                                'documents',
-                                value,
-                                feature['properties'][prop_id]['id'],
-                                output_dir)
+                            download_files('documents', value, feature['properties'][prop_id]['id'], output_dir)
                     elif int(prop_id) in link_ids and feature['properties'][prop_id] is not None:
                         value = feature['properties'][prop_id]['link']
                     elif int(prop_id) in iframe_ids and feature['properties'][prop_id] is not None:
@@ -388,19 +408,15 @@ class DownloadData:
                         value = id_list_values[feature['properties'][prop_id]]
                     else:
                         value = feature['properties'][prop_id]
-                    input_json[
-                        'features'][
-                            counter][
-                                'properties'][
-                                    prop_name] = value
+                    input_json['features'][counter]['properties'][prop_name] = value
                     del input_json['features'][counter]['properties'][prop_id]
                 elif prop_id in ('label', 'object_type_id', 'layers'):
                     del input_json['features'][counter]['properties'][prop_id]
             counter += 1
             progress.setValue(int((counter / float(feature_count)) * 96 + 2))
 
-        if self.dlg.images.isChecked() or self.dlg.documents.isChecked():
-            clean_output_dir(output_dir)
+        #if self.dlg.images.isChecked() or self.dlg.documents.isChecked():
+            #clean_output_dir(output_dir)
         return input_json
 
     def set_objects(self):
@@ -499,6 +515,7 @@ def download_files(file_type, url, id_name, output_dir):
 
 
 def clean_output_dir(output_dir):
+
     if not os.listdir(os.path.join(output_dir, 'images')):
         os.rmdir(os.path.join(output_dir, 'images'))
     if not os.listdir(os.path.join(output_dir, 'documents')):

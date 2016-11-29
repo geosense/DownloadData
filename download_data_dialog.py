@@ -84,12 +84,10 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         self.outputDirButton.setEnabled(True)
 
     def selectdir(self):
-        self.outputDir.setText(QtGui.QFileDialog.getSaveFileName(self,
+        self.outputDir.setText(QtGui.QFileDialog.getExistingDirectory(self,
                                                                  self.tr(
-                                                                 "Save Outup as *.shp"),
-                                                                 QtCore.QDir.homePath(
-                                                                 ),
-                                                                 self.tr("shapefile (*.shp)")) + ".shp")
+                                                                 "Save Output to"),
+                                                                 QtCore.QDir.homePath()))
         self.images.setEnabled(True)
         self.documents.setEnabled(True)
         self.button_box.setEnabled(True)
