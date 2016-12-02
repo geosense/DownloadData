@@ -270,34 +270,12 @@ layers:</string>
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="outputDir">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="frameShape">
-            <enum>QFrame::Panel</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Raised</enum>
-           </property>
-           <property name="lineWidth">
-            <number>1</number>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
+          <widget class="QLineEdit" name="outputDir"/>
          </item>
          <item>
           <widget class="QToolButton" name="outputDirButton">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -382,7 +360,7 @@ layers:</string>
          </property>
          <widget class="QCheckBox" name="images">
           <property name="enabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <property name="geometry">
            <rect>
@@ -398,7 +376,7 @@ layers:</string>
          </widget>
          <widget class="QCheckBox" name="documents">
           <property name="enabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <property name="geometry">
            <rect>
@@ -416,20 +394,18 @@ layers:</string>
        </item>
       </layout>
      </widget>
-     <zorder>layoutWidget</zorder>
-     <zorder>label_5</zorder>
     </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="button_box">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok|QDialogButtonBox::Reset</set>
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Help|QDialogButtonBox::Ok|QDialogButtonBox::Reset</set>
      </property>
     </widget>
    </item>

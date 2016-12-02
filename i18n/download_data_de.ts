@@ -1,76 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE TS><TS version="1.1" language="de_DE">
+<!DOCTYPE TS>
+<TS version="2.0" language="de_DE">
 <context>
     <name>DownloadDataDialog</name>
     <message>
-        <location filename="../download_data_dialog.py" line="89"/>
         <source>Save Outup as *.shp</source>
-        <translation type="unfinished">Speichern als *.shp</translation>
+        <translation type="obsolete">Speichern als *.shp</translation>
     </message>
     <message>
-        <location filename="../download_data_dialog.py" line="92"/>
         <source>shapefile (*.shp)</source>
-        <translation type="unfinished">ESRI Shapefile (*.shp)</translation>
+        <translation type="obsolete">ESRI Shapefile (*.shp)</translation>
     </message>
     <message>
-        <location filename="../download_data_dialog.py" line="54"/>
-        <source>Nepoda&#xc5;&#x99;ilo se na&#xc4;&#x8d;&#xc3;&#xad;t n&#xc4;&#x9b;kter&#xc3;&#xa9; d&#xc5;&#xaf;le&#xc5;&#xbe;it&#xc3;&#xa9; moduly</source>
-        <translation type="unfinished">Einige wichtite Module waren nicht gefunden</translation>
-    </message>
-    <message>
-        <location filename="../download_data_dialog.py" line="55"/>
-        <source>Chyba p&#xc5;&#x99;i importu modul&#xc5;&#xaf;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../download_data_dialog.py" line="61"/>
-        <source>Bohu&#xc5;&#xbe;el se nepoda&#xc5;&#x99;ilo na&#xc4;&#x8d;&#xc3;&#xad;st n&#xc4;&#x9b;kter&#xc3;&#xa9; d&#xc5;&#xaf;le&#xc5;&#xbe;it&#xc3;&#xa9; moduly:
-
-  {}
-
-Z&#xc5;&#x99;ejm&#xc4;&#x9b; je nem&#xc3;&#xa1;te nainstalovan&#xc3;&#xa9; ve va&#xc5;&#xa1;em syst&#xc3;&#xa9;mu.
-
-N&#xc3;&#xa1;vod na instalaci chyb&#xc4;&#x9b;j&#xc3;&#xad;c&#xc3;&#xad;ch modul&#xc5;&#xaf; m&#xc5;&#xaf;&#xc5;&#xbe;ete nal&#xc3;&#xa9;zt n&#xc3;&#xad;&#xc5;&#xbe;e:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../download_data_dialog.py" line="69"/>
-        <source>Pro instalaci chyb&#xc4;&#x9b;j&#xc3;&#xad;ch modul&#xc5;&#xaf; spus&#xc5;&#xa5;te p&#xc5;&#x99;&#xc3;&#xad;kazovou &#xc5;&#x99;&#xc3;&#xa1;dku Windows (cmd) a v n&#xc3;&#xad; spus&#xc5;&#xa5;te n&#xc3;&#xa1;sleduj&#xc3;&#xad;c&#xc3;&#xad; p&#xc5;&#x99;&#xc3;&#xad;kaz: 
-
-</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../download_data_dialog.py" line="73"/>
-        <source>Pro instalaci chyb&#xc4;&#x9b;j&#xc3;&#xad;ch modul&#xc5;&#xaf; spus&#xc5;&#xa5;te p&#xc5;&#x99;&#xc3;&#xad;kazovou &#xc5;&#x99;&#xc3;&#xa1;dku a pou&#xc5;&#xbe;ijte p&#xc5;&#x99;&#xc3;&#xad;kaz: 
-
-</source>
-        <translation type="unfinished"></translation>
+        <source>NepodaÅilo se naÄÃ­t nÄkterÃ© dÅ¯leÅ¾itÃ© moduly</source>
+        <translation type="obsolete">Einige wichtite Module waren nicht gefunden</translation>
     </message>
 </context>
 <context>
     <name>htableDialogBase</name>
-    <message encoding="UTF-8">
+    <message utf8="true">
         <location filename="../download_data_dialog_base.ui" line="14"/>
         <source>Stáhni data z MA CLEERIO</source>
         <translation type="unfinished"></translation>
     </message>
-    <message encoding="UTF-8">
+    <message utf8="true">
         <location filename="../download_data_dialog_base.ui" line="34"/>
         <source>Doména:</source>
         <translation type="unfinished"></translation>
     </message>
-    <message encoding="UTF-8">
+    <message utf8="true">
         <location filename="../download_data_dialog_base.ui" line="95"/>
         <source>Název MA:</source>
         <translation type="unfinished"></translation>
     </message>
-    <message encoding="UTF-8">
+    <message utf8="true">
         <location filename="../download_data_dialog_base.ui" line="120"/>
         <source>bez přihlášení</source>
         <translation type="unfinished"></translation>
     </message>
-    <message encoding="UTF-8">
+    <message utf8="true">
         <location filename="../download_data_dialog_base.ui" line="135"/>
         <source>Jméno:</source>
         <translation type="unfinished"></translation>
@@ -80,23 +48,18 @@ N&#xc3;&#xa1;vod na instalaci chyb&#xc4;&#x9b;j&#xc3;&#xad;c&#xc3;&#xad;ch modul
         <source> Heslo: </source>
         <translation type="unfinished"></translation>
     </message>
-    <message encoding="UTF-8">
-        <location filename="../download_data_dialog_base.ui" line="235"/>
-        <source>Výstup:</source>
-        <translation type="unfinished"></translation>
-    </message>
     <message>
-        <location filename="../download_data_dialog_base.ui" line="293"/>
+        <location filename="../download_data_dialog_base.ui" line="302"/>
         <source>...</source>
         <translation type="unfinished"></translation>
     </message>
-    <message encoding="UTF-8">
-        <location filename="../download_data_dialog_base.ui" line="315"/>
+    <message utf8="true">
+        <location filename="../download_data_dialog_base.ui" line="374"/>
         <source>Stáhnout  obrázky (pokud jsou)</source>
         <translation type="unfinished"></translation>
     </message>
-    <message encoding="UTF-8">
-        <location filename="../download_data_dialog_base.ui" line="325"/>
+    <message utf8="true">
+        <location filename="../download_data_dialog_base.ui" line="390"/>
         <source>stáhnout dokumenty (pokud jsou)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -118,7 +81,7 @@ N&#xc3;&#xa1;vod na instalaci chyb&#xc4;&#x9b;j&#xc3;&#xad;c&#xc3;&#xad;ch modul
     <message>
         <location filename="../download_data_dialog_base.ui" line="199"/>
         <source>Connect</source>
-        <translation type="unfinished"></translation>
+        <translation>Verbinden</translation>
     </message>
     <message>
         <location filename="../download_data_dialog_base.ui" line="208"/>
@@ -129,6 +92,26 @@ layers:</source>
     <message>
         <location filename="../download_data_dialog_base.ui" line="216"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;List of available layers&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Pick one layer from available layers you wish to download data from.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../download_data_dialog_base.ui" line="239"/>
+        <source>Output</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../download_data_dialog_base.ui" line="268"/>
+        <source>Ouput directory:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../download_data_dialog_base.ui" line="328"/>
+        <source>Output file name:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../download_data_dialog_base.ui" line="350"/>
+        <source>Download files</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

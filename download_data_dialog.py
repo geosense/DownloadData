@@ -45,8 +45,11 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         self.treeWidget.clicked.connect(self.enable_output)
         self.outputDirButton.clicked.connect(self.selectdir)
 
+        self.button_box.helpRequested.connect(self.show_help)
+        self.button_box.button(QtGui.QDialogButtonBox.Reset).clicked.connect(self.reset)
+
     def import_error_message(self, modules):
-        """Will print error message about not imported modules
+        """Will display error message about not imported modules
         """
 
         msg = QtGui.QMessageBox()
@@ -92,29 +95,30 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         self.documents.setEnabled(True)
         self.button_box.setEnabled(True)
 
+    def clear(self):
+        self.outputDir.clear()
+        self.treeWidget.clear()
+        self.outputFile.clear()
+        self.images.setChecked(False)
+        self.documents.setChecked(False)
+
     def show(self):
 
         # domains
-        self.domain.clear()
         self.domain.setEnabled(True)
         domains = ['cz', 'sk', 'com']
         self.domain.addItems(domains)
-
         self.getData.setEnabled(True)
         self.maName.setEnabled(True)
         self.checkBox.setEnabled(True)
         self.checkBox.setChecked(True)
         self.userName.setDisabled(True)
         self.userPassword.setDisabled(True)
-        self.button_box.setDisabled(True)
-        self.outputDir.setDisabled(True)
-        self.outputDir.clear()
-        self.outputDirButton.setDisabled(True)
-        self.treeWidget.clear()
-        self.treeWidget.setDisabled(True)
-        self.images.setDisabled(True)
-        self.images.setChecked(False)
-        self.documents.setDisabled(True)
-        self.documents.setChecked(False)
 
         return super(DownloadDataDialog, self)
+
+    def show_help(self):
+        print("############################### heeeeeeeeeelp")
+
+    def reset(self):
+        self.clear()

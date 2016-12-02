@@ -12,6 +12,7 @@ Translation
 ```
 cd i18n
 pyside-lupdate -verbose download_data.pro 
+lupdate -verbose download_data.pro 
 ```
 
 3. Open QT Linguist and translate what is to be translated - all `*.ts` files

@@ -245,7 +245,18 @@ class DownloadData:
         output_dir = self.dlg.outputDir.text()
         output_file_name = os.path.join(output_dir, self.dlg.outputFile.text())
 
-        if os.path.isfile(os.path.join(output_dir, 'downloaded_data.json')):
+        #object_types
+        progress = self._set_progressbar()
+
+        selected_item = self.dlg.treeWidget.selectedItems()
+        selected_layer = selected_item[0].text(0)
+
+        (obj_id, layer_id, crs, geom_type) = get_object_layer_id_crs(
+            selected_layer, self.combinations)
+
+        data_file_name = '{}.json'.format(layer_id)
+
+        if os.path.isfile(os.path.join(output_dir, data_file_name)):
 
                 msgBox = QMessageBox()
                 msgBox.setText(
@@ -264,31 +275,21 @@ class DownloadData:
                     self.overwrite = "Maybe"
                     return
 
-        #object_types
-        progress = self._set_progressbar()
-
-        selected_item = self.dlg.treeWidget.selectedItems()
-        selected_layer = selected_item[0].text(0)
 
         self.set_output_dir(output_dir)
 
-        (obj_id, layer_id, crs, geom_type) = get_object_layer_id_crs(
-            selected_layer, self.combinations)
 
-        (properties, relation_ids, relations_ids, image_ids, document_ids,
-         link_ids, iframe_ids, id_list_ids, id_list_values) = sort_attributes(obj_id, self.object_types)
+        (properties, object_ids) = sort_attributes(obj_id, self.object_types)
 
         data_raw = get_object_type_data(layer_id, obj_id, self.dlg.domain.currentText(), self.gp_id)
 
         json_no_crs = byteify(json.loads(data_raw.text, encoding="utf-8"))
         json_crs = add_crs_definition(json_no_crs, crs)
 
-        full_json = self.change_attributes( json_crs, properties, relation_ids,
-            relations_ids, image_ids, document_ids, link_ids, iframe_ids,
-            id_list_ids, id_list_values, output_dir, progress)
+        full_json = self.change_attributes( json_crs, properties, object_ids, output_dir, progress)
 
 
-        geojson_path = os.path.join(output_dir, 'downloaded_data.json')
+        geojson_path = os.path.join(output_dir, data_file_name)
 
         with open(geojson_path, 'w') as outfile:
             json.dump(full_json, outfile)
@@ -311,7 +312,7 @@ class DownloadData:
         msgBox.exec_()
 
     def save_data_to_layer(self, vlayer, output_file_name):
-        """return QgsVectorFileWriter configured according to 
+        """return QgsVectorFileWriter configured according to
         output file name
         """
         file_format = None
@@ -319,14 +320,19 @@ class DownloadData:
         (name, ext) = os.path.splitext(os.path.basename(output_file_name))
         if ext == ".shp" > 0:
             file_format = 'ESRI Shapefile'
-            params = None
+            QgsVectorFileWriter.writeAsVectorFormat(vlayer, output_file_name,
+                    "utf-8", None, "ESRI Shapefile")
         else:
+            if ext != '.sqlite':
+                output_file_name += ".sqlite"
+                (name, ext) = os.path.splitext(os.path.basename(output_file_name))
             file_format = 'SQLite'
             params = ["SPATIALITE=YES"]
 
-        QgsVectorFileWriter.writeAsVectorFormat(
-            vlayer, output_file_name, "utf-8", None, file_format, False,
-            None, params)
+            QgsVectorFileWriter.writeAsVectorFormat(
+                vlayer, output_file_name, "utf-8", None, file_format, False,
+                None, params)
+
 
         layer = QgsVectorLayer(output_file_name, name, "ogr")
         return layer
@@ -369,14 +375,73 @@ class DownloadData:
         for prop in properties:
             prop_def = '\n{} = {}'.format(properties[prop]['label'],
                                            properties[prop]['name'])
-            print(prop_def)
             text_file.write(prop_def)
         text_file.close()
 
-    def change_attributes(self, input_json,
-        properties, relation_ids, relations_ids, image_ids,
+    def _get_value_function(self, feature, properties, prop_id, object_ids):
+        """object_ids is dict containing following keys:
+
+        relation_ids, relations_ids, image_ids,
         document_ids, link_ids, iframe_ids, id_list_ids, id_list_values,
-        output_dir, progress):
+        """
+
+
+        def get_relation_value(feature, **kwargs):
+            return feature['properties'][prop_id]['id']
+
+        def get_relations_value(feature, **kwargs):
+            related = []
+            for rel_object in feature['properties'][prop_id]['objects']:
+                related.append(rel_object['id'])
+            return str(related)
+
+        def get_image_value(feature, **kwargs):
+            value = feature['properties'][prop_id]['src']
+            if self.dlg.images.isChecked():
+                value = download_files('images', value,
+                        feature['properties'][prop_id]['id'],
+                        kwargs["output_dir"])
+            return value
+
+        def get_file_value(feature, **kwargs):
+            value = feature['properties'][prop_id]['src']
+            if self.dlg.documents.isChecked():
+                value = download_files('documents', value,
+                        feature['properties'][prop_id]['id'],
+                        kwargs["output_dir"])
+            return value
+
+        def get_link_value(feature, **kwargs):
+            return feature['properties'][prop_id]['link']
+
+        def get_iframe_value(feature, **kwargs):
+            return feature['properties'][prop_id]['src']
+
+        def get_list_ids_value(feature, **kwargs):
+            return object_ids["id_list_values"][feature['properties'][prop_id]]
+
+        def get_value(feature, **kwargs):
+            return feature['properties'][prop_id]
+
+        if int(prop_id) in object_ids["relation_ids"] and feature['properties'][prop_id] is not None:
+            return get_relation_value
+        elif int(prop_id) in object_ids["relations_ids"] and feature['properties'][prop_id] is not None:
+            return get_relations_value
+        elif int(prop_id) in object_ids["image_ids"] and feature['properties'][prop_id] is not None:
+            return get_image_value
+        elif int(prop_id) in object_ids["document_ids"] and feature['properties'][prop_id] is not None:
+            return get_file_value
+        elif int(prop_id) in object_ids["link_ids"] and feature['properties'][prop_id] is not None:
+            return get_link_value
+        elif int(prop_id) in object_ids["iframe_ids"] and feature['properties'][prop_id] is not None:
+            return get_iframe_value
+        elif int(prop_id) in object_ids["id_list_ids"] and feature['properties'][prop_id] is not None:
+            return get_list_ids_value
+        else:
+            return get_value
+
+    def change_attributes(self, input_json,
+        properties, object_ids, output_dir, progress):
 
         feature_count = len(input_json['features'])
         counter = 0
@@ -384,30 +449,9 @@ class DownloadData:
             for prop_id in feature['properties'].keys():
                 if prop_id not in ('layers', 'label', 'id', 'object_type_id'):
                     prop_name = properties[prop_id]['name']
-                    value = ''
-                    if int(prop_id) in relation_ids and feature['properties'][prop_id] is not None:
-                        value = feature['properties'][prop_id]['id']
-                    elif int(prop_id) in relations_ids and feature['properties'][prop_id] is not None:
-                        related = []
-                        for rel_object in feature['properties'][prop_id]['objects']:
-                            related.append(rel_object['id'])
-                        value = str(related)
-                    elif int(prop_id) in image_ids and feature['properties'][prop_id] is not None:
-                        value = feature['properties'][prop_id]['src']
-                        if self.dlg.images.isChecked():
-                            download_files('images', value, feature['properties'][prop_id]['id'], output_dir)
-                    elif int(prop_id) in document_ids and feature['properties'][prop_id] is not None:
-                        value = feature['properties'][prop_id]['src']
-                        if self.dlg.documents.isChecked():
-                            download_files('documents', value, feature['properties'][prop_id]['id'], output_dir)
-                    elif int(prop_id) in link_ids and feature['properties'][prop_id] is not None:
-                        value = feature['properties'][prop_id]['link']
-                    elif int(prop_id) in iframe_ids and feature['properties'][prop_id] is not None:
-                        value = feature['properties'][prop_id]['src']
-                    elif int(prop_id) in id_list_ids and feature['properties'][prop_id] is not None:
-                        value = id_list_values[feature['properties'][prop_id]]
-                    else:
-                        value = feature['properties'][prop_id]
+                    value_function = self._get_value_function(feature, properties,
+                                                            prop_id, object_ids)
+                    value = value_function(feature, output_dir=output_dir)
                     input_json['features'][counter]['properties'][prop_name] = value
                     del input_json['features'][counter]['properties'][prop_id]
                 elif prop_id in ('label', 'object_type_id', 'layers'):
@@ -462,7 +506,6 @@ class DownloadData:
 
         self.dlg.treeWidget.setEnabled(True)
         self.dlg.getData.setEnabled(True)
-        self.dlg.outputDir.setEnabled(True)
 
     def get_input_variables(self):
         global SESSION
@@ -505,13 +548,17 @@ class DownloadData:
 
 
 def download_files(file_type, url, id_name, output_dir):
-    images_dir = os.path.join(output_dir, file_type)
+    files_dir = os.path.join(output_dir, file_type)
+    value = url
     if id_name != 'NULL':
         r = requests.get(url)
         output_dir
-        name = os.path.join(images_dir, id_name)
+        # TODO: rename to file name with propper extension
+        name = os.path.join(files_dir, id_name)
         with open(name, "wb") as code:
             code.write(r.content)
+            value = os.path.relpath(os.path.abspath(name), files_dir)
+    return value
 
 
 def clean_output_dir(output_dir):
@@ -567,7 +614,15 @@ def sort_attributes(object_id, object_types):
                     for item in prop['items']:
                         id_list_values[item['value']] = item['label']
 
-    return(properties, relation_ids, relations_ids, image_ids, document_ids, link_ids, iframe_ids, id_list_ids, id_list_values)
+    return(properties, {
+        "relation_ids": relation_ids,
+        "relations_ids": relations_ids,
+        "image_ids": image_ids,
+        "document_ids": document_ids,
+        "link_ids": link_ids,
+        "iframe_ids": iframe_ids,
+        "id_list_ids": id_list_ids,
+        "id_list_values": id_list_values})
 
 
 def get_object_layer_id_crs(selected_layer, combinations):
