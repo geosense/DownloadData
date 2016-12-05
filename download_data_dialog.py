@@ -24,6 +24,7 @@
 import os
 
 from PyQt4 import QtGui, uic, QtCore
+import qgis.utils
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -118,7 +119,7 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         return super(DownloadDataDialog, self)
 
     def show_help(self):
-        print("############################### heeeeeeeeeelp")
+        qgis.utils.showPluginHelp(filename='help/build/html/index')
 
     def reset(self):
         self.clear()

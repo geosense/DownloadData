@@ -1,17 +1,22 @@
+:orphan:
+
 .. DownloadData documentation master file, created by
    sphinx-quickstart on Sun Feb 12 17:11:03 2012.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Cleerio DownloadData plugin for QGIS
-####################################
+Cleerio DownloadData zásuvný modul pro QGIS
+###########################################
 
-.. note:: Cleerio DownloadData QGIS plugin is still in early stage of
-        development. The plugin is just downloading the data for local use,
-        and is not providing any change to remote database.
+.. note:: Cleerio DownloadData QGIS zásuvný modul je zatím v ranné fázi vývoje.
+    Zásuvný modul pouze stahuje data pro lokální použití a neprovádí žédné změny
+    v databázi. 
 
-        Please keep in mind, that the plugin can change in the future and that
-        some bugs may occure. Thank you for helping us with testing.
+    Pamatujte prosím, že se zásuvný modul může v budoucnu měnit a mohou se tím
+    pádem zazézt chyby. Děkujeme, že nám pomáháte s testováním.
+
+.. note:: Tento manuál vychází z anglického původního textu a zatím nebyl zcela
+        přeložen.
 
 Cleerio `DownloadData` QGIS Plugin is suited to be working with `QGIS
 <http://qgis.org>`_ desktop GIS program. It's purpose is to download data from
@@ -23,48 +28,47 @@ are stored to local drive to and corresponding attributes are fixed, so that
 they point to locally stored files.
 
 Content:
-    * :ref:`installation`
-    * :ref:`usage`
-    * :ref:`bugs`
+    * :ref:`installation-cz`
+    * :ref:`usage-cz`
+    * :ref:`bugs-cz`
 
-.. _installation:
+.. _installation-cz:
 
-Installation
-============
+Instalace
+=========
 
-Requirements
-------------
-* `QGIS <http://qgis.org>`_ 2.14 and newer
+Požadavky
+---------
+* `QGIS <http://qgis.org>`_ 2.14 a novější
 * `Python <http://python.org>`_ 2.7
 * `Python requests module <https://pypi.python.org/pypi/requests/>`_
-* `PIP <https://pypi.python.org/pypi/pip>`_ Python package manager 
+* `PIP <https://pypi.python.org/pypi/pip>`_ Python balíkovací nástroj manager 
 
 MS Windows
 ----------
 
-Install QGIS and dependences
-On Windows, make sure you install QGIS using `OSGeo4W
-<http://osgeo4w.osgeo.org/`_ installator.
+Ujistěte se, že je QGIS nainstalován pomocí instalátoru `OSGeo4W
+<http://osgeo4w.osgeo.org/`_.
 
-Install **pip** Python package manager as described https://trac.osgeo.org/osgeo4w/wiki/ExternalPythonPackages
+Nainstlujte **pip** Python package podle návodu https://trac.osgeo.org/osgeo4w/wiki/ExternalPythonPackages
 
-Open Command line by pressing `Win + R` keys and type `cmd` in the dialog and
-click on `OK` button.
+Spusťte Windows příkazový řádek zmáčknutím `Win + R` a zadejte `cmd` do
+dialogového okna  a stikněte tlačítko `OK`.
 
 .. figure:: images/win-cmd.jpg
 
-Continue in the command line::
+Pokračujte v příkazové řádce::
 
         curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
         python get-pip.py
 
-Install `requests` python module::
+Dále nainstalujte `requests` python module::
 
         pip install requests
 
 .. figure:: images/pip-install-win.png
 
-Run QGIS
+A spusťte QGIS.
 
 Linux
 -----
@@ -100,18 +104,18 @@ Once done, new icon should appear on your QGIS.
 
 .. figure:: images/download_data_icon.png
 
-.. _usage:
+.. _usage-cz:
 
-Usage
-=====
+Použití
+=======
 
-1. Open the plugin by clicking at the icon
+1. Spusťte zásuvný modul kliknutím na patřičnou ikonu v liště
 
   .. figure:: images/download_data_icon.png
 
-2. Choose Cleerio application domain, if you have them, fill also `User` and `Password` fields
+2. Zvolte doménu pro aplikace, pokud je máte, vyplňte  `Jméno` a `Heslo` 
 
-3. Write down application name and click on `Connect`
+3. Klikněte na tlačítko `Připojit`
 
   .. figure:: images/download_data_maname.png
 
@@ -131,12 +135,12 @@ Usage
   .. figure:: images/data_in_map.png
 
 
-.. _bugs:
+.. _bugs-cz:
 
-Report problems
-===============
+Nahlášení problémů
+==================
 
-If you have access to Cleerio Redmine at https://redmine.geosense.cz/ fill the
+Pokud máte přístup do Cleerio Redmine https://redmine.geosense.cz/ zadejte nový
 ticket.
 
-Otherwise please contact your local Cleerio Dealer
+V opačném případě kontaktujte svého lokálního distributora.
