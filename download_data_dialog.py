@@ -81,7 +81,8 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
 
         msg.setDetailedText(how_to)
 
-        msg.setStandardButtons(QtGui.QMessageBox.Ok)
+        msg.setStandardButtons(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Help)
+        msg.button(QtGui.QMessageBox.Help).clicked.connect(self.show_help)
         msg.exec_()
 
     def enable_output(self):

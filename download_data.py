@@ -224,8 +224,10 @@ class DownloadData:
 
         # try to import necessary python modules
         false_imports = _import_modules()
+        self.dlg.import_error_message(["asdf"])
         if len(false_imports):
             self.dlg.import_error_message(false_imports)
+            sys.exit()
 
 
         self.dlg.getData.clicked.connect(lambda: self.set_objects())
