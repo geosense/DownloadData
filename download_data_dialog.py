@@ -43,6 +43,9 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
         # widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
+        domains = ['cz', 'sk', 'com']
+        self.domain.addItems(domains)
+
         self.treeWidget.clicked.connect(self.enable_output)
         self.outputDirButton.clicked.connect(self.selectdir)
 
@@ -55,25 +58,25 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
 
         msg = QtGui.QMessageBox()
         msg.setIcon(QtGui.QMessageBox.Critical)
-        msg.setText(self.tr("Nepodařilo se načít některé důležité moduly"))
-        msg.setWindowTitle(self.tr("Chyba při importu modulů"))
+        msg.setText(self.tr("Could not load some of important modules"))
+        msg.setWindowTitle(self.tr("Error while loading modules"))
         msg.setInformativeText(self.tr(
-            "Bohužel se nepodařilo načíst některé důležité moduly:\n\n"
+            "Some of important modules could not be loaded:\n\n"
             "  {}\n\n"
-            "Zřejmě je nemáte nainstalované ve vašem systému.\n\n"
-            "Návod na instalaci chybějících modulů můžete nalézt "
-            "níže:").format(", ".join(modules)))
+            "It seems, they are not available in your Python instance.\n\n"
+            "You can find a manual how to install Python modules lower: "
+            ).format(", ".join(modules)))
 
         how_to = ''
         pip = ""
         import platform
         if platform.system() == 'Windows':
-            how_to = self.tr("Pro instalaci chybějích modulů spusťte příkazovou "
-                             "řádku Windows (cmd) a v ní spusťte následující příkaz: \n\n")
+            how_to = self.tr("For installation of missing modules, open Windows "
+                             "command line (cmd) and run following command: \n\n")
             pip = "C:\\OSGeo4W\\apps\\Python27\\Scripts\\pip.exe"
         else:
-            how_to = self.tr("Pro instalaci chybějích modulů spusťte příkazovou "
-                             "řádku a použijte příkaz: \n\n")
+            how_to = self.tr("For installation of missing modules, open Terminal "
+                        "emulator a and run following command: \n\n")
             pip = "pip"
 
         for module in modules:
@@ -108,8 +111,6 @@ class DownloadDataDialog(QtGui.QDialog, FORM_CLASS):
 
         # domains
         self.domain.setEnabled(True)
-        domains = ['cz', 'sk', 'com']
-        self.domain.addItems(domains)
         self.getData.setEnabled(True)
         self.maName.setEnabled(True)
         self.checkBox.setEnabled(True)
