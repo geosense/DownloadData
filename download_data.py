@@ -35,11 +35,47 @@ import os.path
 import json
 from .download_data_dialog import DownloadDataDialog
 import tempfile
-import sqlite3
+import sqlite3 
 import unicodedata
 import time
+from osgeo import ogr
+from collections import OrderedDict
+import ConfigParser
 
 SESSION = None
+META_MODEL = {}
+attrs = OrderedDict()
+attrs['id'] = "INTEGER PRIMARY KEY AUTOINCREMENT"
+attrs['layer_object'] = "VARCHAR"
+attrs['prop_id'] = "INT"
+attrs['prop_type'] = "VARCHAR"
+attrs['prop_name'] = "VARCHAR"
+attrs['prop_label'] = "VARCHAR"
+attrs['public'] = "BOOL"
+attrs['readonly'] = "BOOL"
+META_MODEL['meta_attributes'] = attrs
+
+user = OrderedDict()
+user['id'] = "INTEGER PRIMARY KEY AUTOINCREMENT"
+user['layer_object'] = "VARCHAR"
+user['user_name'] = "VARCHAR"
+user['read_r'] = "BOOL"
+user['edit_r'] = "BOOL"
+user['delete_r'] = "BOOL"
+META_MODEL['meta_user'] = user
+
+revisions = OrderedDict()
+revisions['id'] = "INTEGER PRIMARY KEY AUTOINCREMENT"
+revisions['layer_object'] = "VARCHAR"
+revisions['revision_date'] = "DATETIME"
+META_MODEL['meta_revisions'] = revisions
+
+changes = OrderedDict()
+changes['id'] = "INTEGER PRIMARY KEY AUTOINCREMENT"
+changes['rev_id'] = "INT"
+changes['feature_id'] = "VARCHAR"
+changes['operation'] = "VARCHAR"
+META_MODEL['meta_changes'] = changes
 
 
 def _import_modules():
@@ -298,19 +334,96 @@ class DownloadData:
         vlayer = QgsVectorLayer(geojson_path,
                 os.path.splitext(os.path.basename(geojson_path))[0], "ogr")
 
-        if geom_type != "NonGeometry":
-            layer = self.save_data_to_layer(vlayer, output_file_name)
-            QgsMapLayerRegistry.instance().addMapLayer(layer)
-        else:
-            QgsMapLayerRegistry.instance().addMapLayer(vlayer)
+        self.save_to_sqlite_db(self.gp_id, layer_id, obj_id, output_dir, geojson_path, properties)
+
+        #if geom_type != "NonGeometry":
+        #    layer = self.save_data_to_layer(vlayer, output_file_name)
+        #    QgsMapLayerRegistry.instance().addMapLayer(layer)
+        #else:
+        #    QgsMapLayerRegistry.instance().addMapLayer(vlayer)
 
         self.write_info(properties, output_dir)
         self.iface.messageBar().clearWidgets()
-        text_msg = self.tr("Downloading finished, data are stored to directory\n{}").format(output_dir)
+        
+        self.save_config()
+	text_msg = self.tr("Downloading finished, data are stored to directory\n{}").format(output_dir)
         msgBox = QMessageBox()
         msgBox.setText(text_msg)
         msgBox.setIcon(QMessageBox.Information)
         msgBox.exec_()
+
+    def save_config(self):
+        """
+	"""
+	cfg_file = os.path.join(QgsApplication.qgisSettingsDirPath(),'cleerio.config')
+	if not os.path.isfile(os.path.join(cfg_file)):
+            open(cfg_file,'w')
+        
+ 	configuration = ConfigParser.RawConfigParser()
+      	configuration.read(cfg_file)
+        
+ 	if not configuration.has_section(str(self.gp_id)):
+            configuration.add_section(str(self.gp_id))
+
+        configuration.set(str(self.gp_id), 'domain', self.domain)  
+        configuration.set(str(self.gp_id), 'user', self.user)
+        configuration.set(str(self.gp_id), 'password', self.password)
+ 	configuration.set(str(self.gp_id), 'directory', self.dlg.outputDir.text())
+ 
+	with open(cfg_file,'wb') as configfile:
+	    configuration.write(configfile)
+
+    def save_to_sqlite_db(self, gp_id, layer_id, obj_id, output_dir, json_path, properties):
+        """
+        """
+        layer_object_name = 'layer' + str(layer_id) + '_'+ 'object' + str(obj_id) 
+        db_path = os.path.join(output_dir, str(gp_id) +'.sqlite')
+        
+        if not os.path.isfile(db_path):
+	    self.create_db(db_path)
+
+	self.save_metadata(gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties)
+                
+
+	target = ogr.GetDriverByName('SQLite').Open(db_path,1)
+	data = ogr.GetDriverByName('GeoJSON').Open(json_path)
+        target.CopyLayer(data.GetLayer(0), layer_object_name + '_origin', ['OVERWRITE=YES'])
+	target.CopyLayer(data.GetLayer(0), layer_object_name + '_origin_revid', ['OVERWRITE=YES'])
+        to_add_layer = QgsVectorLayer(db_path, layer_object_name + '_origin_revid', "ogr")
+        res = QgsMapLayerRegistry.instance().addMapLayer(to_add_layer)        
+
+    def create_db(self, db_path):
+    
+        ogr.GetDriverByName('SQLite').CreateDataSource(db_path)
+
+        con = sqlite3.connect(db_path)
+        cursor = con.cursor()
+
+        for key,val in META_MODEL.items():
+    	    self.create_table(key,val,cursor)
+       	
+    def create_table(self, table_name, attributes, cursor):
+
+        attribute_def = '(' +','.join(str(key + ' ' + val) for key,val in attributes.items()) + ')'
+
+        create_sql = "CREATE TABLE {} {}".format(table_name, attribute_def)
+        cursor.execute(create_sql)
+ 
+    def save_metadata(self, gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties):
+        """
+	"""
+	con = sqlite3.connect(db_path)
+        cursor = con.cursor()
+        delete_sql = ("""DELETE FROM meta_attributes WHERE layer_object = '{}'"""                                        .format(str(layer_id) + '_' + str(obj_id)))
+        cursor.execute(delete_sql)
+        for key,val in properties.items():
+            sql = ("""INSERT INTO meta_attributes 
+                     (layer_object, prop_id, prop_type, prop_label,prop_name, public, readonly) 
+                     VALUES("{}",{},"{}","{}","{}","{}","{}")"""
+                     .format((str(layer_id) + '_' + str(obj_id)), key, val['type'],
+                     val['label'],val['name'],val['public'],val['readonly']))
+            cursor.execute(sql)
+        con.commit()       
 
     def save_data_to_layer(self, vlayer, output_file_name):
         """return QgsVectorFileWriter configured according to
@@ -333,7 +446,6 @@ class DownloadData:
             QgsVectorFileWriter.writeAsVectorFormat(
                 vlayer, output_file_name, "utf-8", None, file_format, False,
                 None, params)
-
 
         layer = QgsVectorLayer(output_file_name, name, "ogr")
         return layer
@@ -443,13 +555,14 @@ class DownloadData:
 
     def change_attributes(self, input_json,
         properties, object_ids, output_dir, progress):
-
+        print(input_json)
         feature_count = len(input_json['features'])
         counter = 0
         for feature in input_json['features']:
             for prop_id in feature['properties'].keys():
                 if prop_id not in ('layers', 'label', 'id', 'object_type_id'):
                     prop_name = properties[prop_id]['name']
+                    #print(prop_id)
                     value_function = self._get_value_function(feature, properties,
                                                             prop_id, object_ids)
                     value = value_function(feature, output_dir=output_dir)
@@ -459,7 +572,7 @@ class DownloadData:
                     del input_json['features'][counter]['properties'][prop_id]
             counter += 1
             progress.setValue(int((counter / float(feature_count)) * 96 + 2))
-
+        print(input_json)
         #if self.dlg.images.isChecked() or self.dlg.documents.isChecked():
             #clean_output_dir(output_dir)
         return input_json
@@ -479,8 +592,20 @@ class DownloadData:
             new_comb['object_type_id'] = object_type['id']
             new_comb['crs'] = layer['projection']
             new_comb['geom_type'] = object_type['geometry_type']
-
+            new_comb['right_def'] = solve_rights(layer['rights'])
+            
             return new_comb
+
+        def solve_rights(right_def):
+
+            right_array = []
+            rights = bin(int(right_def))[2:]
+            for right in rights:
+                right_array.append(right)
+        
+            return right_array
+
+
 
         self.dlg.getData.setDisabled(True)
         self.dlg.treeWidget.clear()
@@ -508,6 +633,8 @@ class DownloadData:
         self.dlg.treeWidget.setEnabled(True)
         self.dlg.getData.setEnabled(True)
 
+
+
     def get_input_variables(self):
         global SESSION
 
@@ -516,10 +643,19 @@ class DownloadData:
         self.user = self.dlg.userName.text()
         self.password = self.dlg.userPassword.text()
 
+        ##############
+        self.domain = 'cz'
+        self.name = 'pelhrimov'
+        self.user = 'a@geosense.cz'
+        self.password = '20gEo15'
+
+
         SESSION = requests.session()
 
         no_login = self.dlg.checkBox.isChecked()
-
+	##############
+        no_login = False
+        
         env_data = get_environment_data(self.domain, self.name)
 
         try:
@@ -597,6 +733,8 @@ def sort_attributes(object_id, object_types):
                 propert['name'] = prop['name']
                 propert['type'] = prop['data_type']
                 propert['label'] = prop['label']
+		propert['public'] = prop['public']
+                propert['readonly'] = prop['readonly']
                 properties[str(prop['id'])] = propert
                 if prop['data_type'] == 'relation':
                     relation_ids.append(prop['id'])
