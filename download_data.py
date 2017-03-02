@@ -504,7 +504,7 @@ class DownloadData:
 
         def get_relations_value(feature, **kwargs):
             related = []
-            for rel_object in feature['properties'][prop_id]['objects']:
+            for rel_object in feature['properties'][prop_id]:
                 related.append(rel_object['id'])
             return str(related)
 
@@ -643,18 +643,11 @@ class DownloadData:
         self.user = self.dlg.userName.text()
         self.password = self.dlg.userPassword.text()
 
-        ##############
-        self.domain = 'cz'
-        self.name = 'pelhrimov'
-        self.user = 'a@geosense.cz'
-        self.password = '20gEo15'
-
 
         SESSION = requests.session()
 
         no_login = self.dlg.checkBox.isChecked()
-	##############
-        no_login = False
+
         
         env_data = get_environment_data(self.domain, self.name)
 
@@ -836,13 +829,21 @@ def get_object_type_data(layer_id, object_type_id, domain, gp_id):
     global SESSION
     url_text = 'http://api.cleerio.' + \
         domain + '/gp2/filter-objects/' + str(gp_id)
-    data_params = """{"controlers":[],"ids_only":0,"layer_ids":[%s],
+    data_params = """{"controlers":[],"ids_only":1,"layer_ids":[%s],
                      "object_type_ids":[%s],"paging":null,"geometries":[],
                      "order":[]}""" % (layer_id, object_type_id)
 
     s = SESSION.post(url_text, data_params)
+    s2 = byteify(json.loads(s.text, encoding="utf-8"))
 
-    return s
+    ids = s2['result']
+    url_text2 = 'http://api.cleerio.' + \
+        domain + '/gp2/find-objects-by-ids/' + str(gp_id)
+
+    data_params2 = '{"request":[{"layer_ids":['+ str(layer_id) +'],"object_ids":'+str(ids)+',"preserve_geometry":true,"order":[]}]}'
+    res = SESSION.post(url_text2, data_params2)
+
+    return res
 
 
 def byteify(input):
