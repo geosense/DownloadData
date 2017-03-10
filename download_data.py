@@ -41,6 +41,7 @@ import time
 from osgeo import ogr
 from collections import OrderedDict
 import ConfigParser
+import sys
 
 SESSION = None
 META_MODEL = {}
@@ -58,6 +59,7 @@ META_MODEL['meta_attributes'] = attrs
 user = OrderedDict()
 user['id'] = "INTEGER PRIMARY KEY AUTOINCREMENT"
 user['layer_object'] = "VARCHAR"
+user['layer_object_name'] = "VARCHAR"
 user['user_name'] = "VARCHAR"
 user['read_r'] = "BOOL"
 user['edit_r'] = "BOOL"
@@ -271,8 +273,13 @@ class DownloadData:
         result = self.dlg.exec_()
 
         # See if OK button was clicked
-        if result:
-            self.save_objects()
+        if result:	
+	    try:
+		self.save_objects()
+	    except Exception,e:
+		raise
+	    
+
 
     def save_objects(self):
         """Save required objects in result
@@ -315,7 +322,6 @@ class DownloadData:
 
         self.set_output_dir(output_dir)
 
-
         (properties, object_ids) = sort_attributes(obj_id, self.object_types)
 
         data_raw = get_object_type_data(layer_id, obj_id, self.dlg.domain.currentText(), self.gp_id)
@@ -323,10 +329,17 @@ class DownloadData:
         json_no_crs = byteify(json.loads(data_raw.text, encoding="utf-8"))
         json_crs = add_crs_definition(json_no_crs, crs)
 
-        full_json = self.change_attributes( json_crs, properties, object_ids, output_dir, progress)
+    	
+	full_json = self.change_attributes( json_crs, properties, object_ids, output_dir, progress)
 
-
+        try:
+	    res = full_json['features']
+	except Exception,e:
+	    exc = Exception
+	    return exc
+ 
         geojson_path = os.path.join(output_dir, data_file_name)
+		
 
         with open(geojson_path, 'w') as outfile:
             json.dump(full_json, outfile)
@@ -334,13 +347,7 @@ class DownloadData:
         vlayer = QgsVectorLayer(geojson_path,
                 os.path.splitext(os.path.basename(geojson_path))[0], "ogr")
 
-        self.save_to_sqlite_db(self.gp_id, layer_id, obj_id, output_dir, geojson_path, properties)
-
-        #if geom_type != "NonGeometry":
-        #    layer = self.save_data_to_layer(vlayer, output_file_name)
-        #    QgsMapLayerRegistry.instance().addMapLayer(layer)
-        #else:
-        #    QgsMapLayerRegistry.instance().addMapLayer(vlayer)
+        self.save_to_sqlite_db(self.gp_id, layer_id, obj_id, output_dir, geojson_path, properties, selected_layer)
 
         self.write_info(properties, output_dir)
         self.iface.messageBar().clearWidgets()
@@ -373,24 +380,25 @@ class DownloadData:
 	with open(cfg_file,'wb') as configfile:
 	    configuration.write(configfile)
 
-    def save_to_sqlite_db(self, gp_id, layer_id, obj_id, output_dir, json_path, properties):
+    def save_to_sqlite_db(self, gp_id, layer_id, obj_id, output_dir, json_path, properties, selected_layer):
         """
         """
         layer_object_name = 'layer' + str(layer_id) + '_'+ 'object' + str(obj_id) 
         db_path = os.path.join(output_dir, str(gp_id) +'.sqlite')
+        table = layer_object_name + '_origin'
         
         if not os.path.isfile(db_path):
 	    self.create_db(db_path)
 
-	self.save_metadata(gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties)
-                
+	self.save_metadata(gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties)                
 
 	target = ogr.GetDriverByName('SQLite').Open(db_path,1)
 	data = ogr.GetDriverByName('GeoJSON').Open(json_path)
-        target.CopyLayer(data.GetLayer(0), layer_object_name + '_origin', ['OVERWRITE=YES'])
-	target.CopyLayer(data.GetLayer(0), layer_object_name + '_origin_revid', ['OVERWRITE=YES'])
-        to_add_layer = QgsVectorLayer(db_path, layer_object_name + '_origin_revid', "ogr")
-        res = QgsMapLayerRegistry.instance().addMapLayer(to_add_layer)        
+        target.CopyLayer(data.GetLayer(0), table , ['OVERWRITE=YES'])
+	target.CopyLayer(data.GetLayer(0), table + '_revid', ['OVERWRITE=YES'])
+
+	vlayer = QgsVectorLayer('{}|layername={}'.format(db_path,table + '_revid'), selected_layer , 'ogr')
+        QgsMapLayerRegistry.instance().addMapLayer(vlayer)       
 
     def create_db(self, db_path):
     
@@ -425,31 +433,6 @@ class DownloadData:
             cursor.execute(sql)
         con.commit()       
 
-    def save_data_to_layer(self, vlayer, output_file_name):
-        """return QgsVectorFileWriter configured according to
-        output file name
-        """
-        file_format = None
-        params = None
-        (name, ext) = os.path.splitext(os.path.basename(output_file_name))
-        if ext == ".shp" > 0:
-            file_format = 'ESRI Shapefile'
-            QgsVectorFileWriter.writeAsVectorFormat(vlayer, output_file_name,
-                    "utf-8", None, "ESRI Shapefile")
-        else:
-            if ext != '.sqlite':
-                output_file_name += ".sqlite"
-                (name, ext) = os.path.splitext(os.path.basename(output_file_name))
-            file_format = 'SQLite'
-            params = ["SPATIALITE=YES"]
-
-            QgsVectorFileWriter.writeAsVectorFormat(
-                vlayer, output_file_name, "utf-8", None, file_format, False,
-                None, params)
-
-        layer = QgsVectorLayer(output_file_name, name, "ogr")
-        return layer
-
     def _set_progressbar(self):
         """Set QGIS progress bar and display progress
         """
@@ -467,10 +450,6 @@ class DownloadData:
 
     def set_output_dir(self, target_dir):
         """Create output directory
-
-        Directory is created in qgisSettigsDirPath and is called 'CLEERIO_data'
-
-        it usually leads to ~/.qgis2/CLEERIO_data
         """
 
         if self.dlg.images.isChecked():
@@ -500,13 +479,23 @@ class DownloadData:
 
 
         def get_relation_value(feature, **kwargs):
-            return feature['properties'][prop_id]['id']
+            return feature['properties'][prop_id]
 
         def get_relations_value(feature, **kwargs):
             related = []
             for rel_object in feature['properties'][prop_id]:
                 related.append(rel_object['id'])
             return str(related)
+
+        def get_multirelation_value(feature, **kwargs):
+            return feature['properties'][prop_id]
+
+        def get_multirelations_value(feature, **kwargs):
+            related = []
+            for rel_object in feature['properties'][prop_id]:
+                related.append(rel_object['id'])
+            return str(related)
+
 
         def get_image_value(feature, **kwargs):
             value = feature['properties'][prop_id]['src']
@@ -540,6 +529,10 @@ class DownloadData:
             return get_relation_value
         elif int(prop_id) in object_ids["relations_ids"] and feature['properties'][prop_id] is not None:
             return get_relations_value
+	elif int(prop_id) in object_ids["multirelation_ids"] and feature['properties'][prop_id] is not None:
+            return get_multirelation_value
+	elif int(prop_id) in object_ids["multirelations_ids"] and feature['properties'][prop_id] is not None:
+            return get_multirelations_value
         elif int(prop_id) in object_ids["image_ids"] and feature['properties'][prop_id] is not None:
             return get_image_value
         elif int(prop_id) in object_ids["document_ids"] and feature['properties'][prop_id] is not None:
@@ -555,14 +548,27 @@ class DownloadData:
 
     def change_attributes(self, input_json,
         properties, object_ids, output_dir, progress):
-        print(input_json)
+        
+        try: 
+            val = input_json['features']
+ 	except Exception, e:
+	    
+            exc = Exception
+	    
+            text_msg = ("Data se nepodarilo stahnout \n zkuste to znovu anebo kontaktuje cleerio").decode("utf-8")
+            msgBox = QMessageBox()
+            msgBox.setText(text_msg)
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.exec_()
+            return exc
+            
+
         feature_count = len(input_json['features'])
         counter = 0
         for feature in input_json['features']:
             for prop_id in feature['properties'].keys():
                 if prop_id not in ('layers', 'label', 'id', 'object_type_id'):
                     prop_name = properties[prop_id]['name']
-                    #print(prop_id)
                     value_function = self._get_value_function(feature, properties,
                                                             prop_id, object_ids)
                     value = value_function(feature, output_dir=output_dir)
@@ -572,7 +578,7 @@ class DownloadData:
                     del input_json['features'][counter]['properties'][prop_id]
             counter += 1
             progress.setValue(int((counter / float(feature_count)) * 96 + 2))
-        print(input_json)
+        
         #if self.dlg.images.isChecked() or self.dlg.documents.isChecked():
             #clean_output_dir(output_dir)
         return input_json
@@ -604,7 +610,6 @@ class DownloadData:
                 right_array.append(right)
         
             return right_array
-
 
 
         self.dlg.getData.setDisabled(True)
@@ -644,10 +649,10 @@ class DownloadData:
         self.password = self.dlg.userPassword.text()
 
 
+
         SESSION = requests.session()
 
         no_login = self.dlg.checkBox.isChecked()
-
         
         env_data = get_environment_data(self.domain, self.name)
 
@@ -678,25 +683,27 @@ class DownloadData:
 
 
 def download_files(file_type, url, id_name, output_dir):
+    """
+    Downloads images/documents in overwrite mode
+    """
     files_dir = os.path.join(output_dir, file_type)
     value = url
     if id_name != 'NULL':
         r = requests.get(url)
-        output_dir
-        # TODO: rename to file name with propper extension
-        name = os.path.join(files_dir, id_name)
+        ext = r.headers['Content-Type'].split('/',)[1]        
+        name = os.path.join(files_dir, id_name + '.' + ext)
         with open(name, "wb") as code:
             code.write(r.content)
             value = os.path.relpath(os.path.abspath(name), files_dir)
     return value
 
 
-def clean_output_dir(output_dir):
-
-    if not os.listdir(os.path.join(output_dir, 'images')):
-        os.rmdir(os.path.join(output_dir, 'images'))
-    if not os.listdir(os.path.join(output_dir, 'documents')):
-        os.rmdir(os.path.join(output_dir, 'documents'))
+#def clean_output_dir(output_dir):
+#
+#    if not os.listdir(os.path.join(output_dir, 'images')):
+#        os.rmdir(os.path.join(output_dir, 'images'))
+#    if not os.listdir(os.path.join(output_dir, 'documents')):
+#        os.rmdir(os.path.join(output_dir, 'documents'))
 
 
 def add_crs_definition(json, crs_def):
@@ -713,6 +720,8 @@ def sort_attributes(object_id, object_types):
     properties = {}
     relation_ids = []
     relations_ids = []
+    multirelation_ids = []
+    multirelations_ids = []	
     image_ids = []
     document_ids = []
     link_ids = []
@@ -733,6 +742,10 @@ def sort_attributes(object_id, object_types):
                     relation_ids.append(prop['id'])
                 elif prop['data_type'] == 'relations':
                     relations_ids.append(prop['id'])
+		elif prop['data_type'] == 'multirelation':
+                    multirelation_ids.append(prop['id'])
+		elif prop['data_type'] == 'multirelations':
+                    multirelations_ids.append(prop['id'])
                 elif prop['data_type'] == 'image':
                     image_ids.append(prop['id'])
                 elif prop['data_type'] == 'document':
@@ -749,6 +762,8 @@ def sort_attributes(object_id, object_types):
     return(properties, {
         "relation_ids": relation_ids,
         "relations_ids": relations_ids,
+        "multirelation_ids":multirelation_ids,
+ 	"multirelations_ids":multirelations_ids,
         "image_ids": image_ids,
         "document_ids": document_ids,
         "link_ids": link_ids,
@@ -778,7 +793,7 @@ def get_environment_data(domain, name):
     """
     global SESSION
 
-    url_text = 'http://api.cleerio.' + domain + '/gp2/get-environment/' + name
+    url_text = 'https://api.cleerio.' + domain + '/gp2/get-environment/' + name
     result = SESSION.post(url_text)
     response = byteify(json.loads(result.text, encoding="utf-8"))
 
@@ -792,12 +807,12 @@ def get_environment_data(domain, name):
 
 
 def try_user_login(domain, user, password, gp_id):
-    login = 'http://api.cleerio.' + domain + '/gp2/sign-in/' + str(gp_id)
+    login = 'https://api.cleerio.' + domain + '/gp2/sign-in/' + str(gp_id)
     login_data = {"username": user,"password": password}
 
     log_in = SESSION.post(login, data=json.dumps(login_data))
     response = byteify(json.loads(log_in.text, encoding="utf-8"))
-
+    #print('LOGOVANI:', log_in.text)
     try:
         login_status = response['result']
     except Exception as e:
@@ -812,7 +827,7 @@ def get_user_data(domain, name):
     """
     global SESSION
 
-    service_url = 'http://api.cleerio.' + \
+    service_url = 'https://api.cleerio.' + \
         domain + '/gp2/get-environment/' + name
 
     response_file = SESSION.post(service_url)
@@ -827,23 +842,26 @@ def get_object_type_data(layer_id, object_type_id, domain, gp_id):
     Get GEOJSON by GP_ID, LAYER_ID and OBJECT_TYPE_ID
     """
     global SESSION
-    url_text = 'http://api.cleerio.' + \
+    url_text = 'https://api.cleerio.' + \
         domain + '/gp2/filter-objects/' + str(gp_id)
     data_params = """{"controlers":[],"ids_only":1,"layer_ids":[%s],
                      "object_type_ids":[%s],"paging":null,"geometries":[],
                      "order":[]}""" % (layer_id, object_type_id)
 
-    s = SESSION.post(url_text, data_params)
-    s2 = byteify(json.loads(s.text, encoding="utf-8"))
-
-    ids = s2['result']
-    url_text2 = 'http://api.cleerio.' + \
+    s_get_ids = SESSION.post(url_text, data_params)
+    res = byteify(json.loads(s_get_ids.text, encoding="utf-8"))
+    
+    ids = res['result']
+    formated_ids =  ','.join(('"' + str(val) + '"') for val in ids)
+    url_text2 = 'https://api.cleerio.' + \
         domain + '/gp2/find-objects-by-ids/' + str(gp_id)
+    data_params2 = '''{"request":[{"layer_ids":["'''+ str(layer_id) + '''"],
+                       "object_ids":[''' + formated_ids + '''],
+                       "preserve_geometry":true,"order":[]}]}'''
+   
+    res2 = SESSION.post(url_text2, data_params2)
 
-    data_params2 = '{"request":[{"layer_ids":['+ str(layer_id) +'],"object_ids":'+str(ids)+',"preserve_geometry":true,"order":[]}]}'
-    res = SESSION.post(url_text2, data_params2)
-
-    return res
+    return res2
 
 
 def byteify(input):
