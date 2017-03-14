@@ -62,6 +62,7 @@ user['layer_object'] = "VARCHAR"
 user['layer_object_name'] = "VARCHAR"
 user['user_name'] = "VARCHAR"
 user['read_r'] = "BOOL"
+user['add_r'] = "BOOL"
 user['edit_r'] = "BOOL"
 user['delete_r'] = "BOOL"
 META_MODEL['meta_user'] = user
@@ -319,16 +320,12 @@ class DownloadData:
                     self.overwrite = "Maybe"
                     return
 
-
         self.set_output_dir(output_dir)
-
         (properties, object_ids) = sort_attributes(obj_id, self.object_types)
-
         data_raw = get_object_type_data(layer_id, obj_id, self.dlg.domain.currentText(), self.gp_id)
-
+	
         json_no_crs = byteify(json.loads(data_raw.text, encoding="utf-8"))
         json_crs = add_crs_definition(json_no_crs, crs)
-
     	
 	full_json = self.change_attributes( json_crs, properties, object_ids, output_dir, progress)
 
@@ -338,8 +335,7 @@ class DownloadData:
 	    exc = Exception
 	    return exc
  
-        geojson_path = os.path.join(output_dir, data_file_name)
-		
+        geojson_path = os.path.join(output_dir, data_file_name)		
 
         with open(geojson_path, 'w') as outfile:
             json.dump(full_json, outfile)
@@ -347,9 +343,8 @@ class DownloadData:
         vlayer = QgsVectorLayer(geojson_path,
                 os.path.splitext(os.path.basename(geojson_path))[0], "ogr")
 
-        self.save_to_sqlite_db(self.gp_id, layer_id, obj_id, output_dir, geojson_path, properties, selected_layer)
+        self.save_to_sqlite_db(self.gp_id, layer_id, obj_id, output_dir, geojson_path, properties, selected_layer, COMBINATION)
 
-        self.write_info(properties, output_dir)
         self.iface.messageBar().clearWidgets()
         
         self.save_config()
@@ -380,27 +375,45 @@ class DownloadData:
 	with open(cfg_file,'wb') as configfile:
 	    configuration.write(configfile)
 
-    def save_to_sqlite_db(self, gp_id, layer_id, obj_id, output_dir, json_path, properties, selected_layer):
-        """
+    def save_to_sqlite_db(self, gp_id, layer_id, obj_id, output_dir, json_path, properties, selected_layer, combinations):
+        """Create DB if not exist, save metadata, save layers
         """
         layer_object_name = 'layer' + str(layer_id) + '_'+ 'object' + str(obj_id) 
         db_path = os.path.join(output_dir, str(gp_id) +'.sqlite')
         table = layer_object_name + '_origin'
         
         if not os.path.isfile(db_path):
-	    self.create_db(db_path)
+	    self.create_db_tables(db_path)
 
-	self.save_metadata(gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties)                
+	self.save_metadata(gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties, combinations, selected_layer)   
+        self.manage_layer_toc(db_path, json_path, table, properties, selected_layer)             
 
+ 
+    def manage_layer_toc(self, db_path, json_path, table, properties, selected_layer):
+	"""Add layer to sqlite DB (also copy), add layer to TOC, set readonly values
+	"""
 	target = ogr.GetDriverByName('SQLite').Open(db_path,1)
 	data = ogr.GetDriverByName('GeoJSON').Open(json_path)
         target.CopyLayer(data.GetLayer(0), table , ['OVERWRITE=YES'])
 	target.CopyLayer(data.GetLayer(0), table + '_revid', ['OVERWRITE=YES'])
-
 	vlayer = QgsVectorLayer('{}|layername={}'.format(db_path,table + '_revid'), selected_layer , 'ogr')
-        QgsMapLayerRegistry.instance().addMapLayer(vlayer)       
+	vlayer.setProviderEncoding('UTF-8')
+        QgsMapLayerRegistry.instance().addMapLayer(vlayer)
+        fields = {}
+        counter = 0
+	for field in vlayer.pendingFields():
+            fields[field.name()] = counter
+            counter = counter + 1 
+	
+	for key,val in properties.items():
+	    if val['readonly'] == True:
+		index = fields[val['name']]
+    		vlayer.editFormConfig().setReadOnly(index,True)
+	       
 
-    def create_db(self, db_path):
+    def create_db_tables(self, db_path):
+	"""Create meta tables by META_MODEL
+	"""
     
         ogr.GetDriverByName('SQLite').CreateDataSource(db_path)
 
@@ -411,26 +424,45 @@ class DownloadData:
     	    self.create_table(key,val,cursor)
        	
     def create_table(self, table_name, attributes, cursor):
-
+	"""Create table by definition
+	"""
         attribute_def = '(' +','.join(str(key + ' ' + val) for key,val in attributes.items()) + ')'
 
         create_sql = "CREATE TABLE {} {}".format(table_name, attribute_def)
         cursor.execute(create_sql)
  
-    def save_metadata(self, gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties):
+    def save_metadata(self, gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties, combinations, selected_layer):
         """
 	"""
 	con = sqlite3.connect(db_path)
         cursor = con.cursor()
-        delete_sql = ("""DELETE FROM meta_attributes WHERE layer_object = '{}'"""                                        .format(str(layer_id) + '_' + str(obj_id)))
+	layer_ob = str(layer_id) + '_' + str(obj_id)
+        delete_sql = ("""DELETE FROM meta_attributes WHERE layer_object = '{}'"""                                        .format(layer_ob))
         cursor.execute(delete_sql)
         for key,val in properties.items():
             sql = ("""INSERT INTO meta_attributes 
                      (layer_object, prop_id, prop_type, prop_label,prop_name, public, readonly) 
                      VALUES("{}",{},"{}","{}","{}","{}","{}")"""
-                     .format((str(layer_id) + '_' + str(obj_id)), key, val['type'],
+                     .format(layer_ob, key, val['type'],
                      val['label'],val['name'],val['public'],val['readonly']))
             cursor.execute(sql)
+        read = bool
+	add = bool
+        write = bool
+	delete = bool
+        layer_obj_name = ''
+        for layer in combinations:
+            if layer['name'] == selected_layer:
+		layer_obj_name = layer['name']
+		read = layer['right_def'][0]
+		add = layer['right_def'][1]
+		write = layer['right_def'][2]
+		delete = layer['right_def'][3]
+		 
+        sql = """INSERT INTO meta_user 
+            (layer_object, layer_object_name, user_name, read_r, add_r, edit_r, delete_r) 
+            VALUES("{}","{}","{}","{}","{}","{}","{}")""".format(layer_ob, layer_obj_name,self.user, read, add, write, delete)
+	cursor.execute(sql)
         con.commit()       
 
     def _set_progressbar(self):
@@ -460,15 +492,6 @@ class DownloadData:
             documents_dir = os.path.join(target_dir, "documents")
             if not os.path.isdir(documents_dir):
                 os.mkdir(documents_dir)
-
-    def write_info(self, properties, output_dir):
-        text_file = open(os.path.join(output_dir,'LOG_MESSAGE.txt'), "w")
-        text_file.write(self.tr("Atributy dat:"))
-        for prop in properties:
-            prop_def = '\n{} = {}'.format(properties[prop]['label'],
-                                           properties[prop]['name'])
-            text_file.write(prop_def)
-        text_file.close()
 
     def _get_value_function(self, feature, properties, prop_id, object_ids):
         """object_ids is dict containing following keys:
@@ -551,11 +574,10 @@ class DownloadData:
         
         try: 
             val = input_json['features']
- 	except Exception, e:
-	    
-            exc = Exception
-	    
-            text_msg = ("Data se nepodarilo stahnout \n zkuste to znovu anebo kontaktuje cleerio").decode("utf-8")
+ 	except Exception, e:	    
+            exc = Exception	    
+            text_msg = ("""Data se nepodarilo stahnout \n zkuste to 
+                           znovu anebo kontaktuje cleerio""").decode("utf-8")
             msgBox = QMessageBox()
             msgBox.setText(text_msg)
             msgBox.setIcon(QMessageBox.Question)
@@ -579,14 +601,14 @@ class DownloadData:
             counter += 1
             progress.setValue(int((counter / float(feature_count)) * 96 + 2))
         
-        #if self.dlg.images.isChecked() or self.dlg.documents.isChecked():
-            #clean_output_dir(output_dir)
         return input_json
 
     def set_objects(self):
         """This function is running after "Connect" button is hit and will
         download data from the server
         """
+
+  	global COMBINATION
 
         def create_combination(layer, object_type):
             """Create combination of layers and object types
@@ -635,6 +657,7 @@ class DownloadData:
                         layer_item = QtGui.QTreeWidgetItem([combination["name"]])
                         self.dlg.treeWidget.addTopLevelItem(layer_item)
 
+        COMBINATION = self.combinations
         self.dlg.treeWidget.setEnabled(True)
         self.dlg.getData.setEnabled(True)
 
@@ -649,11 +672,10 @@ class DownloadData:
         self.password = self.dlg.userPassword.text()
 
 
-
         SESSION = requests.session()
 
         no_login = self.dlg.checkBox.isChecked()
-        
+       
         env_data = get_environment_data(self.domain, self.name)
 
         try:
@@ -681,7 +703,6 @@ class DownloadData:
         return env_data
 
 
-
 def download_files(file_type, url, id_name, output_dir):
     """
     Downloads images/documents in overwrite mode
@@ -696,14 +717,6 @@ def download_files(file_type, url, id_name, output_dir):
             code.write(r.content)
             value = os.path.relpath(os.path.abspath(name), files_dir)
     return value
-
-
-#def clean_output_dir(output_dir):
-#
-#    if not os.listdir(os.path.join(output_dir, 'images')):
-#        os.rmdir(os.path.join(output_dir, 'images'))
-#    if not os.listdir(os.path.join(output_dir, 'documents')):
-#        os.rmdir(os.path.join(output_dir, 'documents'))
 
 
 def add_crs_definition(json, crs_def):
@@ -812,7 +825,7 @@ def try_user_login(domain, user, password, gp_id):
 
     log_in = SESSION.post(login, data=json.dumps(login_data))
     response = byteify(json.loads(log_in.text, encoding="utf-8"))
-    #print('LOGOVANI:', log_in.text)
+    
     try:
         login_status = response['result']
     except Exception as e:
@@ -859,9 +872,9 @@ def get_object_type_data(layer_id, object_type_id, domain, gp_id):
                        "object_ids":[''' + formated_ids + '''],
                        "preserve_geometry":true,"order":[]}]}'''
    
-    res2 = SESSION.post(url_text2, data_params2)
+    res_full_data = SESSION.post(url_text2, data_params2)
 
-    return res2
+    return res_full_data
 
 
 def byteify(input):
