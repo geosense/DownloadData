@@ -288,8 +288,7 @@ class DownloadData:
 
         # output configuration
         output_dir = self.dlg.outputDir.text()
-        output_file_name = os.path.join(output_dir, self.dlg.outputFile.text())
-
+        
         #object_types
         progress = self._set_progressbar()
 
@@ -458,10 +457,12 @@ class DownloadData:
 		add = layer['right_def'][1]
 		write = layer['right_def'][2]
 		delete = layer['right_def'][3]
-		 
+	
+        print(layer_ob,layer_obj_name,self.user, read, add, write, delete)	 
         sql = """INSERT INTO meta_user 
             (layer_object, layer_object_name, user_name, read_r, add_r, edit_r, delete_r) 
-            VALUES("{}","{}","{}","{}","{}","{}","{}")""".format(layer_ob, layer_obj_name,self.user, read, add, write, delete)
+            VALUES("{}","{}","{}","{}","{}","{}","{}")""".format(layer_ob, layer_obj_name.encode('utf-8'), self.user.encode('utf-8'), read, add, write, delete)
+        
 	cursor.execute(sql)
         con.commit()       
 
@@ -710,12 +711,13 @@ def download_files(file_type, url, id_name, output_dir):
     files_dir = os.path.join(output_dir, file_type)
     value = url
     if id_name != 'NULL':
-        r = requests.get(url)
-        ext = r.headers['Content-Type'].split('/',)[1]        
-        name = os.path.join(files_dir, id_name + '.' + ext)
-        with open(name, "wb") as code:
-            code.write(r.content)
-            value = os.path.relpath(os.path.abspath(name), files_dir)
+        print (value)
+        #r = requests.get(url)
+        #ext = r.headers['Content-Type'].split('/',)[1]        
+        #name = os.path.join(files_dir, id_name + '.' + ext)
+        #with open(name, "wb") as code:
+        #    code.write(r.content)
+        #    value = os.path.relpath(os.path.abspath(name), files_dir)
     return value
 
 
