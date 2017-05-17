@@ -71,6 +71,8 @@ revisions = OrderedDict()
 revisions['id'] = "INTEGER PRIMARY KEY AUTOINCREMENT"
 revisions['layer_object'] = "VARCHAR"
 revisions['revision_date'] = "DATETIME"
+revisions['status'] = "VARCHAR"
+revisions['fid_max'] = "INT"
 META_MODEL['meta_revisions'] = revisions
 
 changes = OrderedDict()
@@ -403,12 +405,64 @@ class DownloadData:
 	for field in vlayer.pendingFields():
             fields[field.name()] = counter
             counter = counter + 1 
-	
+	print(properties)
 	for key,val in properties.items():
+	    print(val['type'])
 	    if val['readonly'] == True:
 		index = fields[val['name']]
     		vlayer.editFormConfig().setReadOnly(index,True)
+            ## musi se resit jinak, ale to bez zmen na api nejde
+	    elif val['type'] in ('link, iframe, image, document,relations, relation,multirelation, multirelations'):
+                index = fields[val['name']]
+    		vlayer.editFormConfig().setReadOnly(index,True)
+
+
+        vlayer.editFormConfig().setReadOnly(fields['OGC_FID'],True)
+	vlayer.editFormConfig().setReadOnly(fields['id'],True)
 	       
+    def retype_field(self, db_path, table, prop_name, prop_type, vlayer):
+        con = sqlite3.connect(db_path)
+        cursor = con.cursor()
+        sql = """alter table {table} add column temp date;""".format(table = table, att = prop_name, att_type = prop_type) 
+        sql1 = """update {table} SET temp = {att};""".format(table = table, att = prop_name, att_type = prop_type) 
+	#sql2 = """alter table {table} drop column {att};""".format(table = table, att = prop_name, att_type = prop_type) 
+        sql3 = """alter table {table} add column {att} {att_type};""".format(table = table, att = prop_name, att_type = prop_type)                  
+        #sql4 = """update {table} set {att} = temp""".format(table = table, att = prop_name, att_type = prop_type) 
+        cursor.execute(sql)
+        cursor.execute(sql1)
+        #cursor.execute(sql2)
+        cursor.execute(sql3)
+        #cursor.execute(sql4)
+
+ 	#field = QgsField( 'temp', QVariant.Date )
+        #vlayer.dataProvider().addAttributes( [field] )
+        #vlayer.dataProvider().addAttributes([field])
+	#vlayer.updateFields()
+	#vlayer.startEditing()
+        #idx = vlayer.dataProvider().fieldNameIndex('temp')
+        #e = QgsExpression('"zac_evid"')
+	#e.prepare(vlayer.pendingFields())
+        #for f in vlayer.getFeatures():
+	#    f[idx] = e.evaluate(f)
+        #    vlayer.updateFeature(f)
+        #vlayer.commitChanges()
+
+        #vlayer.dataProvider().deleteAttributes([vlayer.dataProvider().fieldNameIndex('zac_evid')])
+	#vlayer.updateFields()
+
+        #vlayer.dataProvider().addAttributes([QgsField('zac_evid2', QVariant.Date)])
+	#vlayer.updateFields()
+
+	#vlayer.startEditing()
+        #idx = vlayer.dataProvider().fieldNameIndex('zac_evid2')
+        #e = QgsExpression('"temp"')
+	#e.prepare(vlayer.pendingFields())
+        #for f in vlayer.getFeatures():
+	#    f[idx] = e.evaluate(f)
+        #    vlayer.updateFeature(f)
+        #vlayer.commitChanges()
+	#vlayer.stopEditing()
+                
 
     def create_db_tables(self, db_path):
 	"""Create meta tables by META_MODEL
@@ -548,6 +602,7 @@ class DownloadData:
 
         def get_value(feature, **kwargs):
             return feature['properties'][prop_id]
+       
 
         if int(prop_id) in object_ids["relation_ids"] and feature['properties'][prop_id] is not None:
             return get_relation_value
