@@ -54,6 +54,7 @@ attrs['prop_name'] = "VARCHAR"
 attrs['prop_label'] = "VARCHAR"
 attrs['public'] = "BOOL"
 attrs['readonly'] = "BOOL"
+attrs['all_values'] = "VARCHAR"
 META_MODEL['meta_attributes'] = attrs
 
 user = OrderedDict()
@@ -419,50 +420,7 @@ class DownloadData:
 
         vlayer.editFormConfig().setReadOnly(fields['OGC_FID'],True)
 	vlayer.editFormConfig().setReadOnly(fields['id'],True)
-	       
-    def retype_field(self, db_path, table, prop_name, prop_type, vlayer):
-        con = sqlite3.connect(db_path)
-        cursor = con.cursor()
-        sql = """alter table {table} add column temp date;""".format(table = table, att = prop_name, att_type = prop_type) 
-        sql1 = """update {table} SET temp = {att};""".format(table = table, att = prop_name, att_type = prop_type) 
-	#sql2 = """alter table {table} drop column {att};""".format(table = table, att = prop_name, att_type = prop_type) 
-        sql3 = """alter table {table} add column {att} {att_type};""".format(table = table, att = prop_name, att_type = prop_type)                  
-        #sql4 = """update {table} set {att} = temp""".format(table = table, att = prop_name, att_type = prop_type) 
-        cursor.execute(sql)
-        cursor.execute(sql1)
-        #cursor.execute(sql2)
-        cursor.execute(sql3)
-        #cursor.execute(sql4)
-
- 	#field = QgsField( 'temp', QVariant.Date )
-        #vlayer.dataProvider().addAttributes( [field] )
-        #vlayer.dataProvider().addAttributes([field])
-	#vlayer.updateFields()
-	#vlayer.startEditing()
-        #idx = vlayer.dataProvider().fieldNameIndex('temp')
-        #e = QgsExpression('"zac_evid"')
-	#e.prepare(vlayer.pendingFields())
-        #for f in vlayer.getFeatures():
-	#    f[idx] = e.evaluate(f)
-        #    vlayer.updateFeature(f)
-        #vlayer.commitChanges()
-
-        #vlayer.dataProvider().deleteAttributes([vlayer.dataProvider().fieldNameIndex('zac_evid')])
-	#vlayer.updateFields()
-
-        #vlayer.dataProvider().addAttributes([QgsField('zac_evid2', QVariant.Date)])
-	#vlayer.updateFields()
-
-	#vlayer.startEditing()
-        #idx = vlayer.dataProvider().fieldNameIndex('zac_evid2')
-        #e = QgsExpression('"temp"')
-	#e.prepare(vlayer.pendingFields())
-        #for f in vlayer.getFeatures():
-	#    f[idx] = e.evaluate(f)
-        #    vlayer.updateFeature(f)
-        #vlayer.commitChanges()
-	#vlayer.stopEditing()
-                
+	                      
 
     def create_db_tables(self, db_path):
 	"""Create meta tables by META_MODEL
@@ -482,6 +440,7 @@ class DownloadData:
         attribute_def = '(' +','.join(str(key + ' ' + val) for key,val in attributes.items()) + ')'
 
         create_sql = "CREATE TABLE {} {}".format(table_name, attribute_def)
+        print(create_sql)
         cursor.execute(create_sql)
  
     def save_metadata(self, gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties, combinations, selected_layer):
@@ -494,10 +453,10 @@ class DownloadData:
         cursor.execute(delete_sql)
         for key,val in properties.items():
             sql = ("""INSERT INTO meta_attributes 
-                     (layer_object, prop_id, prop_type, prop_label,prop_name, public, readonly) 
-                     VALUES("{}",{},"{}","{}","{}","{}","{}")"""
+                     (layer_object, prop_id, prop_type, prop_label,prop_name, public, readonly, all_values) 
+                     VALUES("{}",{},"{}","{}","{}","{}","{}","{}")"""
                      .format(layer_ob, key, val['type'],
-                     val['label'],val['name'],val['public'],val['readonly']))
+                     val['label'],val['name'],val['public'],val['readonly'],val['values']))
             cursor.execute(sql)
         read = bool
 	add = bool
@@ -807,7 +766,7 @@ def sort_attributes(object_id, object_types):
                 propert['label'] = prop['label']
 		propert['public'] = prop['public']
                 propert['readonly'] = prop['readonly']
-                properties[str(prop['id'])] = propert
+                propert['values'] = None
                 if prop['data_type'] == 'relation':
                     relation_ids.append(prop['id'])
                 elif prop['data_type'] == 'relations':
@@ -828,6 +787,8 @@ def sort_attributes(object_id, object_types):
                     id_list_ids.append(prop['id'])
                     for item in prop['items']:
                         id_list_values[item['value']] = item['label']
+                    propert['values'] = id_list_values
+		properties[str(prop['id'])] = propert
 
     return(properties, {
         "relation_ids": relation_ids,
