@@ -808,7 +808,6 @@ def sort_attributes(object_id, object_types):
         "id_list_ids": id_list_ids,
         "id_list_values": id_list_values})
 
-uzemni plan saratice
 def get_object_layer_id_crs(selected_layer, combinations):
     obj_id = int
     layer_id = int
