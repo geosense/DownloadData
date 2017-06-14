@@ -457,6 +457,7 @@ class DownloadData:
                      VALUES("{}",{},"{}","{}","{}","{}","{}","{}")"""
                      .format(layer_ob, key, val['type'],
                      val['label'],val['name'],val['public'],val['readonly'],val['values']))
+            print(sql)
             cursor.execute(sql)
         read = bool
 	add = bool
@@ -507,7 +508,7 @@ class DownloadData:
             if not os.path.isdir(documents_dir):
                 os.mkdir(documents_dir)
 
-    def _get_value_function(self, feature, properties, prop_id, object_ids):
+    def _get_value_function(self, feature, properties, prop_id, object_ids, counter):
         """object_ids is dict containing following keys:
 
         relation_ids, relations_ids, image_ids,
@@ -537,6 +538,8 @@ class DownloadData:
         def get_image_value(feature, **kwargs):
             value = feature['properties'][prop_id]['src']
             if self.dlg.images.isChecked():
+                if counter % 500 == 0:
+                    time.sleep(60)
                 value = download_files('images', value,
                         feature['properties'][prop_id]['id'],
                         kwargs["output_dir"])
@@ -557,7 +560,10 @@ class DownloadData:
             return feature['properties'][prop_id]['src']
 
         def get_list_ids_value(feature, **kwargs):
-            return object_ids["id_list_values"][feature['properties'][prop_id]]
+            if feature['properties'][prop_id] == '':
+                return ''
+	    else:
+                return properties[prop_id]['values'][str(feature['properties'][prop_id])]
 
         def get_value(feature, **kwargs):
             return feature['properties'][prop_id]
@@ -607,7 +613,7 @@ class DownloadData:
                 if prop_id not in ('layers', 'label', 'id', 'object_type_id'):
                     prop_name = properties[prop_id]['name']
                     value_function = self._get_value_function(feature, properties,
-                                                            prop_id, object_ids)
+                                                            prop_id, object_ids, counter)
                     value = value_function(feature, output_dir=output_dir)
                     input_json['features'][counter]['properties'][prop_name] = value
                     del input_json['features'][counter]['properties'][prop_id]
@@ -726,12 +732,12 @@ def download_files(file_type, url, id_name, output_dir):
     value = url
     if id_name != 'NULL':
         print (value)
-        #r = requests.get(url)
-        #ext = r.headers['Content-Type'].split('/',)[1]        
-        #name = os.path.join(files_dir, id_name + '.' + ext)
-        #with open(name, "wb") as code:
-        #    code.write(r.content)
-        #    value = os.path.relpath(os.path.abspath(name), files_dir)
+        r = requests.get(url)
+        ext = r.headers['Content-Type'].split('/',)[1]        
+        name = os.path.join(files_dir, id_name + '.' + ext)
+        with open(name, "wb") as code:
+            code.write(r.content)
+            value = os.path.relpath(os.path.abspath(name), files_dir)
     return value
 
 
@@ -786,7 +792,7 @@ def sort_attributes(object_id, object_types):
                 elif prop['data_type'] in ('id_list', 'id_alist', 'id_elist'):
                     id_list_ids.append(prop['id'])
                     for item in prop['items']:
-                        id_list_values[item['value']] = item['label']
+                        id_list_values[str(item['value'])] = item['label']
                     propert['values'] = id_list_values
 		properties[str(prop['id'])] = propert
 
@@ -802,7 +808,7 @@ def sort_attributes(object_id, object_types):
         "id_list_ids": id_list_ids,
         "id_list_values": id_list_values})
 
-
+uzemni plan saratice
 def get_object_layer_id_crs(selected_layer, combinations):
     obj_id = int
     layer_id = int
