@@ -418,7 +418,7 @@ class DownloadData:
     		vlayer.editFormConfig().setReadOnly(index,True)
 
 
-        vlayer.editFormConfig().setReadOnly(fields['OGC_FID'],True)
+        vlayer.editFormConfig().setReadOnly(0, True)
 	vlayer.editFormConfig().setReadOnly(fields['id'],True)
 	                      
 
@@ -830,7 +830,7 @@ def get_environment_data(domain, name):
     global SESSION
 
     url_text = 'https://api.cleerio.' + domain + '/gp2/get-environment/' + name
-    result = SESSION.post(url_text)
+    result = SESSION.post(url_text, verify = False)
     response = byteify(json.loads(result.text, encoding="utf-8"))
 
     try:
@@ -846,7 +846,7 @@ def try_user_login(domain, user, password, gp_id):
     login = 'https://api.cleerio.' + domain + '/gp2/sign-in/' + str(gp_id)
     login_data = {"username": user,"password": password}
 
-    log_in = SESSION.post(login, data=json.dumps(login_data))
+    log_in = SESSION.post(login, data=json.dumps(login_data), verify = False)
     response = byteify(json.loads(log_in.text, encoding="utf-8"))
     
     try:
@@ -866,7 +866,7 @@ def get_user_data(domain, name):
     service_url = 'https://api.cleerio.' + \
         domain + '/gp2/get-environment/' + name
 
-    response_file = SESSION.post(service_url)
+    response_file = SESSION.post(service_url, verify = False)
 
     response = byteify(json.loads(response_file.text, encoding="utf-8"))
 
@@ -884,7 +884,7 @@ def get_object_type_data(layer_id, object_type_id, domain, gp_id):
                      "object_type_ids":[%s],"paging":null,"geometries":[],
                      "order":[]}""" % (layer_id, object_type_id)
 
-    s_get_ids = SESSION.post(url_text, data_params)
+    s_get_ids = SESSION.post(url_text, data_params, verify = False)
     res = byteify(json.loads(s_get_ids.text, encoding="utf-8"))
     
     ids = res['result']
@@ -895,7 +895,7 @@ def get_object_type_data(layer_id, object_type_id, domain, gp_id):
                        "object_ids":[''' + formated_ids + '''],
                        "preserve_geometry":true,"order":[]}]}'''
    
-    res_full_data = SESSION.post(url_text2, data_params2)
+    res_full_data = SESSION.post(url_text2, data_params2, verify = False)
 
     return res_full_data
 
