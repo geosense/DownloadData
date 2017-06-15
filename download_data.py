@@ -406,9 +406,7 @@ class DownloadData:
 	for field in vlayer.pendingFields():
             fields[field.name()] = counter
             counter = counter + 1 
-	print(properties)
 	for key,val in properties.items():
-	    print(val['type'])
 	    if val['readonly'] == True:
 		index = fields[val['name']]
     		vlayer.editFormConfig().setReadOnly(index,True)
@@ -440,7 +438,6 @@ class DownloadData:
         attribute_def = '(' +','.join(str(key + ' ' + val) for key,val in attributes.items()) + ')'
 
         create_sql = "CREATE TABLE {} {}".format(table_name, attribute_def)
-        print(create_sql)
         cursor.execute(create_sql)
  
     def save_metadata(self, gp_id, layer_id, obj_id, output_dir, json_path,db_path, properties, combinations, selected_layer):
@@ -457,7 +454,7 @@ class DownloadData:
                      VALUES("{}",{},"{}","{}","{}","{}","{}","{}")"""
                      .format(layer_ob, key, val['type'],
                      val['label'],val['name'],val['public'],val['readonly'],val['values']))
-            print(sql)
+    
             cursor.execute(sql)
         read = bool
 	add = bool
@@ -472,7 +469,7 @@ class DownloadData:
 		write = layer['right_def'][2]
 		delete = layer['right_def'][3]
 	
-        print(layer_ob,layer_obj_name,self.user, read, add, write, delete)	 
+         
         sql = """INSERT INTO meta_user 
             (layer_object, layer_object_name, user_name, read_r, add_r, edit_r, delete_r) 
             VALUES("{}","{}","{}","{}","{}","{}","{}")""".format(layer_ob, layer_obj_name.encode('utf-8'), self.user.encode('utf-8'), read, add, write, delete)
@@ -731,7 +728,6 @@ def download_files(file_type, url, id_name, output_dir):
     files_dir = os.path.join(output_dir, file_type)
     value = url
     if id_name != 'NULL':
-        print (value)
         r = requests.get(url)
         ext = r.headers['Content-Type'].split('/',)[1]        
         name = os.path.join(files_dir, id_name + '.' + ext)
