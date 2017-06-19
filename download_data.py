@@ -43,6 +43,7 @@ from collections import OrderedDict
 import ConfigParser
 import sys
 
+
 SESSION = None
 META_MODEL = {}
 attrs = OrderedDict()
@@ -372,8 +373,8 @@ class DownloadData:
         configuration.set(str(self.gp_id), 'domain', self.domain)  
         configuration.set(str(self.gp_id), 'user', self.user)
         configuration.set(str(self.gp_id), 'password', self.password)
- 	configuration.set(str(self.gp_id), 'directory', self.dlg.outputDir.text())
- 
+ 	configuration.set(str(self.gp_id), 'directory', self.dlg.outputDir.text().encode("utf-8"))
+     
 	with open(cfg_file,'wb') as configfile:
 	    configuration.write(configfile)
 
@@ -398,8 +399,10 @@ class DownloadData:
 	data = ogr.GetDriverByName('GeoJSON').Open(json_path)
         target.CopyLayer(data.GetLayer(0), table , ['OVERWRITE=YES'])
 	target.CopyLayer(data.GetLayer(0), table + '_revid', ['OVERWRITE=YES'])
-	vlayer = QgsVectorLayer('{}|layername={}'.format(db_path,table + '_revid'), selected_layer , 'ogr')
-	vlayer.setProviderEncoding('UTF-8')
+        layer_dest = '{}|layername={}'.format(os.path.normpath(db_path.encode("utf-8")),table + '_revid')
+        print (unicode(layer_dest, "utf-8"), type(layer_dest))
+	vlayer = QgsVectorLayer(unicode(layer_dest,"utf-8"), selected_layer , 'ogr')
+        vlayer.setProviderEncoding('UTF-8')
         QgsMapLayerRegistry.instance().addMapLayer(vlayer)
         fields = {}
         counter = 0
